@@ -1,26 +1,116 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: toggling `.dark` on <html> flips the theme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens (OKLCH). A restrained, neutral system with a single indigo
+ * accent — the "invisible details" come from consistent spacing, contrast and
+ * motion, not from loud color. Light and dark are tuned as separate palettes,
+ * not naive inversions.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --radius: 0.75rem;
+
+  --background: oklch(0.994 0.002 260);
+  --foreground: oklch(0.18 0.012 265);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.012 265);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.012 265);
+
+  --muted: oklch(0.968 0.003 260);
+  --muted-foreground: oklch(0.505 0.014 260);
+
+  --accent: oklch(0.965 0.006 265);
+  --accent-foreground: oklch(0.22 0.02 265);
+
+  --primary: oklch(0.55 0.2 266);
+  --primary-foreground: oklch(0.99 0.005 260);
+
+  --border: oklch(0.916 0.005 260);
+  --input: oklch(0.916 0.005 260);
+  --ring: oklch(0.55 0.2 266);
+
+  --success: oklch(0.6 0.14 155);
+  --danger: oklch(0.58 0.22 22);
+}
+
+.dark {
+  --background: oklch(0.165 0.008 266);
+  --foreground: oklch(0.96 0.004 260);
+
+  --card: oklch(0.198 0.009 266);
+  --card-foreground: oklch(0.96 0.004 260);
+
+  --popover: oklch(0.205 0.009 266);
+  --popover-foreground: oklch(0.96 0.004 260);
+
+  --muted: oklch(0.246 0.009 266);
+  --muted-foreground: oklch(0.688 0.012 260);
+
+  --accent: oklch(0.262 0.012 266);
+  --accent-foreground: oklch(0.96 0.004 260);
+
+  --primary: oklch(0.66 0.185 266);
+  --primary-foreground: oklch(0.16 0.01 266);
+
+  --border: oklch(0.278 0.01 266);
+  --input: oklch(0.3 0.011 266);
+  --ring: oklch(0.66 0.185 266);
+
+  --success: oklch(0.7 0.14 158);
+  --danger: oklch(0.68 0.19 22);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Respect users who prefer reduced motion — never animate against their wish. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

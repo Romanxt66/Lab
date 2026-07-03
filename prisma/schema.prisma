@@ -1,0 +1,56 @@
+// Prisma schema — persistence layer (an infrastructure detail).
+// Client is generated into src/generated/prisma (see .gitignore).
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  // Prisma 7: the connection URL lives in prisma.config.ts (for the CLI) and is
+  // supplied to PrismaClient at runtime via a driver adapter (see shared/db.ts).
+}
+
+/// Reusable email template with `{{variable}}` placeholders.
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  name      String
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// History of every email send attempt.
+model EmailLog {
+  id      String   @id @default(uuid())
+  to      String
+  subject String
+  status  String // "sent" | "failed"
+  error   String?
+  sentAt  DateTime @default(now())
+}
+
+/// A cron-scheduled task that runs an action ("email" | "scrape").
+model ScheduledJob {
+  id        String   @id @default(uuid())
+  name      String
+  cron      String // 5-field cron expression
+  action    String // "email" | "scrape"
+  params    String // JSON payload for the action
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  runs      JobRun[]
+}
+
+/// Result of one execution of a ScheduledJob.
+model JobRun {
+  id        String       @id @default(uuid())
+  jobId     String
+  job       ScheduledJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status    String // "success" | "error"
+  output    String?
+  startedAt DateTime     @default(now())
+}
