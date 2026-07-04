@@ -34,11 +34,13 @@ export default async function ToolPage({
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
-      <header className="mb-8">
+      <header className="animate-enter mb-8">
         <h1 className="text-2xl font-semibold tracking-tight">{name}</h1>
         <p className="mt-1.5 text-[15px] text-muted-foreground">{description}</p>
       </header>
-      <Component />
+      <div className="animate-fade [animation-delay:60ms]">
+        <Component />
+      </div>
     </div>
   );
 }

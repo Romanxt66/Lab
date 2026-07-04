@@ -17,12 +17,12 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-border bg-card/40">
+    <aside className="glass flex h-full w-64 shrink-0 flex-col border-r border-border/70">
       <Link
         href="/"
-        className="flex items-center gap-2.5 px-5 py-5 text-[15px] font-semibold tracking-tight"
+        className="group flex items-center gap-2.5 px-5 py-5 text-[15px] font-semibold tracking-tight"
       >
-        <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+        <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground transition-transform duration-300 [transition-timing-function:var(--ease-out)] group-hover:scale-105">
           <FlaskConical className="size-4" />
         </span>
         Lab
@@ -50,10 +50,10 @@ export function Sidebar() {
                       <Link
                         href={href}
                         className={cn(
-                          "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors duration-150",
+                          "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-[color,background-color] duration-200 [transition-timing-function:var(--ease-out)]",
                           active
-                            ? "bg-accent font-medium text-accent-foreground"
-                            : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                            ? "bg-foreground/10 font-medium text-foreground"
+                            : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
                         )}
                       >
                         <Icon className="size-4 shrink-0" />
