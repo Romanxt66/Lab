@@ -22,6 +22,10 @@ import type {
   JobAction,
   JobActionHandler,
 } from "@/modules/scheduler/application/ports";
+import { CalendarService } from "@/modules/calendar/application/calendar-service";
+import { PrismaCalendarRepo } from "@/modules/calendar/infrastructure/prisma-calendar-repo";
+import { PrismaUserRepo } from "@/modules/users/infrastructure/prisma-user-repo";
+import type { UserRepoPort } from "@/modules/users/application/ports";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -93,4 +97,16 @@ export function getRunJob(): RunJob {
 
 export function getRunDueJobs(): RunDueJobs {
   return new RunDueJobs(getJobRepo(), getRunJob());
+}
+
+// --- Calendar --------------------------------------------------------------
+
+export function getCalendarService(): CalendarService {
+  return new CalendarService(new PrismaCalendarRepo());
+}
+
+// --- Users -----------------------------------------------------------------
+
+export function getUserRepo(): UserRepoPort {
+  return new PrismaUserRepo();
 }

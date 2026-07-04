@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const CATEGORY_ORDER: ToolCategory[] = [
   "dev-utils",
+  "calendar",
   "email",
   "scraper",
   "scheduler",

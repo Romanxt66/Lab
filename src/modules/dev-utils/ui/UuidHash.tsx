@@ -25,7 +25,13 @@ export function UuidHash() {
 
 function UuidPanel() {
   const [count, setCount] = React.useState(5);
-  const [uuids, setUuids] = React.useState<string[]>(() => generateUuids(5));
+  // Generate on mount, not during render: random values differ between the
+  // server and client and would break hydration.
+  const [uuids, setUuids] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    setUuids(generateUuids(5));
+  }, []);
 
   return (
     <section className="space-y-3">

@@ -54,3 +54,36 @@ model JobRun {
   output    String?
   startedAt DateTime     @default(now())
 }
+
+/// Lab users (separate table so it won't collide with the other project's
+/// tables in the shared database). Mapped to `usuarioslab`.
+model UsuariosLab {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  name         String?
+  passwordHash String
+  role         String     @default("user") // "user" | "superadmin"
+  createdAt    DateTime   @default(now())
+  eventos      Calendario[]
+
+  @@map("usuarioslab")
+}
+
+/// Calendar events. Mapped to `calendario`.
+model Calendario {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  start       DateTime
+  end         DateTime?
+  allDay      Boolean      @default(false)
+  location    String?
+  color       String? // optional accent tag
+  userId      String?
+  user        UsuariosLab? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([start])
+  @@map("calendario")
+}

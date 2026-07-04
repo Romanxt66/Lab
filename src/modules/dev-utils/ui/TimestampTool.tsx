@@ -14,10 +14,15 @@ import { ErrorNote } from "./shared";
 
 export function TimestampTool() {
   const [input, setInput] = React.useState("");
-  const [data, setData] = React.useState<TimeBreakdown | null>(() =>
-    nowBreakdown(),
-  );
+  // Start null and fill on mount: computing "now" during SSR would mismatch
+  // the client on hydration.
+  const [data, setData] = React.useState<TimeBreakdown | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!input.trim()) setData(nowBreakdown());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   React.useEffect(() => {
     if (!input.trim()) {

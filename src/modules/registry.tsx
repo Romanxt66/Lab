@@ -10,6 +10,7 @@ import {
   KeyRound,
   Fingerprint,
   CalendarClock,
+  CalendarDays,
   Regex,
 } from "lucide-react";
 import { JsonFormatter } from "@/modules/dev-utils/ui/JsonFormatter";
@@ -21,6 +22,7 @@ import { RegexTester } from "@/modules/dev-utils/ui/RegexTester";
 import { EmailAutomation } from "@/modules/email/ui/EmailAutomation";
 import { ScraperTool } from "@/modules/scraper/ui/ScraperTool";
 import { JobScheduler } from "@/modules/scheduler/ui/JobScheduler";
+import { CalendarTool } from "@/modules/calendar/ui/CalendarTool";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -30,7 +32,12 @@ import { JobScheduler } from "@/modules/scheduler/ui/JobScheduler";
  * Adding a tool = append one entry here + create its module under `modules/`.
  */
 
-export type ToolCategory = "email" | "dev-utils" | "scraper" | "scheduler";
+export type ToolCategory =
+  | "email"
+  | "dev-utils"
+  | "scraper"
+  | "scheduler"
+  | "calendar";
 
 export interface CategoryMeta {
   id: ToolCategory;
@@ -40,6 +47,7 @@ export interface CategoryMeta {
 
 export const CATEGORIES: Record<ToolCategory, CategoryMeta> = {
   "dev-utils": { id: "dev-utils", label: "Utilidades de dev", icon: Wrench },
+  calendar: { id: "calendar", label: "Calendario", icon: CalendarDays },
   email: { id: "email", label: "Correos", icon: Mail },
   scraper: { id: "scraper", label: "Scraping / APIs", icon: Globe },
   scheduler: { id: "scheduler", label: "Tareas programadas", icon: Clock },
@@ -143,6 +151,15 @@ export const TOOLS: ToolMeta[] = [
     icon: Clock,
     status: "ready",
     Component: JobScheduler,
+  },
+  {
+    slug: "calendar",
+    name: "Calendario",
+    description: "Registra y gestiona eventos en una vista mensual.",
+    category: "calendar",
+    icon: CalendarDays,
+    status: "ready",
+    Component: CalendarTool,
   },
 ];
 

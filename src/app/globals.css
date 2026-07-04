@@ -44,15 +44,15 @@
   --glass-border: oklch(0.145 0 0 / 0.08);
   --glow: oklch(0 0 0 / 0.05);
 
-  /* Liquid glass (Apple-style frosted buttons) */
-  --lg-bg: oklch(1 0 0 / 0.45);
-  --lg-bg-hover: oklch(1 0 0 / 0.62);
-  --lg-border: oklch(1 0 0 / 0.55);
-  --lg-highlight: oklch(1 0 0 / 0.75);
-  --lg-inner: oklch(0.145 0 0 / 0.06);
-  --lg-shadow: oklch(0.145 0 0 / 0.14);
-  --lg-primary: oklch(0.17 0 0 / 0.82);
-  --lg-primary-hover: oklch(0.17 0 0 / 0.92);
+  /* Liquid glass (Apple-style frosted buttons) — kept highly translucent */
+  --lg-bg: oklch(1 0 0 / 0.22);
+  --lg-bg-hover: oklch(1 0 0 / 0.4);
+  --lg-border: oklch(1 0 0 / 0.45);
+  --lg-highlight: oklch(1 0 0 / 0.7);
+  --lg-inner: oklch(0.145 0 0 / 0.05);
+  --lg-shadow: oklch(0.145 0 0 / 0.12);
+  --lg-primary: oklch(0.17 0 0 / 0.62);
+  --lg-primary-hover: oklch(0.17 0 0 / 0.78);
 
   /* Easing curves (strong, intentional) */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -92,14 +92,14 @@
   --glass-border: oklch(1 0 0 / 0.1);
   --glow: oklch(1 0 0 / 0.06);
 
-  --lg-bg: oklch(1 0 0 / 0.08);
-  --lg-bg-hover: oklch(1 0 0 / 0.15);
-  --lg-border: oklch(1 0 0 / 0.16);
-  --lg-highlight: oklch(1 0 0 / 0.22);
+  --lg-bg: oklch(1 0 0 / 0.05);
+  --lg-bg-hover: oklch(1 0 0 / 0.11);
+  --lg-border: oklch(1 0 0 / 0.12);
+  --lg-highlight: oklch(1 0 0 / 0.2);
   --lg-inner: oklch(1 0 0 / 0.04);
-  --lg-shadow: oklch(0 0 0 / 0.5);
-  --lg-primary: oklch(0.97 0 0 / 0.9);
-  --lg-primary-hover: oklch(1 0 0 / 1);
+  --lg-shadow: oklch(0 0 0 / 0.45);
+  --lg-primary: oklch(0.97 0 0 / 0.72);
+  --lg-primary-hover: oklch(0.97 0 0 / 0.88);
 }
 
 @theme inline {
