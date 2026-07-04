@@ -7,14 +7,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default:
-          "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
-        outline:
-          "border border-border glass hover:border-foreground/25 hover:bg-accent/60",
-        ghost: "hover:bg-accent/70 hover:text-accent-foreground",
-        secondary: "bg-muted text-foreground hover:bg-muted/70",
-        danger:
-          "bg-danger text-white shadow-sm hover:bg-danger/90",
+        default: "liquid-glass-primary",
+        outline: "liquid-glass text-foreground",
+        secondary: "liquid-glass text-foreground",
+        ghost:
+          "text-foreground/80 hover:bg-foreground/10 hover:text-foreground",
+        danger: "liquid-glass text-danger hover:text-danger",
       },
       size: {
         default: "h-9 px-4 py-2",

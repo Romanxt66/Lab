@@ -44,6 +44,16 @@
   --glass-border: oklch(0.145 0 0 / 0.08);
   --glow: oklch(0 0 0 / 0.05);
 
+  /* Liquid glass (Apple-style frosted buttons) */
+  --lg-bg: oklch(1 0 0 / 0.45);
+  --lg-bg-hover: oklch(1 0 0 / 0.62);
+  --lg-border: oklch(1 0 0 / 0.55);
+  --lg-highlight: oklch(1 0 0 / 0.75);
+  --lg-inner: oklch(0.145 0 0 / 0.06);
+  --lg-shadow: oklch(0.145 0 0 / 0.14);
+  --lg-primary: oklch(0.17 0 0 / 0.82);
+  --lg-primary-hover: oklch(0.17 0 0 / 0.92);
+
   /* Easing curves (strong, intentional) */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -81,6 +91,15 @@
   --glass-strong: oklch(0.2 0 0 / 0.72);
   --glass-border: oklch(1 0 0 / 0.1);
   --glow: oklch(1 0 0 / 0.06);
+
+  --lg-bg: oklch(1 0 0 / 0.08);
+  --lg-bg-hover: oklch(1 0 0 / 0.15);
+  --lg-border: oklch(1 0 0 / 0.16);
+  --lg-highlight: oklch(1 0 0 / 0.22);
+  --lg-inner: oklch(1 0 0 / 0.04);
+  --lg-shadow: oklch(0 0 0 / 0.5);
+  --lg-primary: oklch(0.97 0 0 / 0.9);
+  --lg-primary-hover: oklch(1 0 0 / 1);
 }
 
 @theme inline {
@@ -156,6 +175,79 @@ body::before {
   .glass,
   .glass-strong {
     background: var(--card);
+  }
+}
+
+/* --- Liquid glass (Apple-style) --------------------------------------------
+ * Frosted translucent fill + a bright specular highlight along the top edge,
+ * a hairline inner border and a soft floating shadow. */
+.liquid-glass,
+.liquid-glass-primary {
+  position: relative;
+  isolation: isolate;
+  -webkit-backdrop-filter: blur(14px) saturate(1.8);
+  backdrop-filter: blur(14px) saturate(1.8);
+  border: 1px solid var(--lg-border);
+  box-shadow:
+    inset 0 1px 0 0 var(--lg-highlight),
+    inset 0 -1px 0 0 var(--lg-inner),
+    0 1px 2px -1px var(--lg-shadow),
+    0 6px 18px -6px var(--lg-shadow);
+  transition:
+    background-color 0.25s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    transform 0.18s var(--ease-out);
+}
+.liquid-glass {
+  background: var(--lg-bg);
+}
+.liquid-glass:hover {
+  background: var(--lg-bg-hover);
+  box-shadow:
+    inset 0 1px 0 0 var(--lg-highlight),
+    inset 0 -1px 0 0 var(--lg-inner),
+    0 2px 4px -1px var(--lg-shadow),
+    0 10px 26px -8px var(--lg-shadow);
+}
+.liquid-glass-primary {
+  background: var(--lg-primary);
+  color: var(--primary-foreground);
+}
+.liquid-glass-primary:hover {
+  background: var(--lg-primary-hover);
+}
+/* The moving specular sweep — the "liquid" cue. */
+.liquid-glass::after,
+.liquid-glass-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    var(--lg-highlight) 50%,
+    transparent 70%
+  );
+  opacity: 0;
+  transform: translateX(-60%);
+  transition:
+    transform 0.7s var(--ease-out),
+    opacity 0.7s var(--ease-out);
+  pointer-events: none;
+  z-index: -1;
+}
+.liquid-glass:hover::after,
+.liquid-glass-primary:hover::after {
+  opacity: 0.4;
+  transform: translateX(60%);
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .liquid-glass {
+    background: var(--card);
+  }
+  .liquid-glass-primary {
+    background: var(--primary);
   }
 }
 
