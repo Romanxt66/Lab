@@ -2,7 +2,7 @@
 set -e
 
 echo "[entrypoint] prisma db push (crea/sincroniza tablas del Lab)..."
-npx prisma db push --skip-generate
+npx prisma db push
 
 if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
   echo "[entrypoint] Verificando superadmin ($ADMIN_EMAIL)..."
