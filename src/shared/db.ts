@@ -13,8 +13,21 @@ const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
 
+/** Read the `?schema=` param from the URL so all queries hit the Lab's own
+ * PostgreSQL schema (isolated from other projects living in `public`). */
+function schemaFromUrl(url: string): string {
+  try {
+    return new URL(url).searchParams.get("schema") || "public";
+  } catch {
+    return "public";
+  }
+}
+
 function createClient(): PrismaClient {
-  const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
+  const adapter = new PrismaPg(
+    { connectionString: env.DATABASE_URL },
+    { schema: schemaFromUrl(env.DATABASE_URL) },
+  );
   return new PrismaClient({ adapter });
 }
 

@@ -28,7 +28,11 @@ async function main() {
     process.env.ADMIN_PASSWORD ??
     randomBytes(18).toString("base64").replace(/[+/=]/g, "").slice(0, 18);
 
-  const adapter = new PrismaPg({ connectionString: url });
+  let schema = "public";
+  try {
+    schema = new URL(url).searchParams.get("schema") ?? "public";
+  } catch {}
+  const adapter = new PrismaPg({ connectionString: url }, { schema });
   const db = new PrismaClient({ adapter });
 
   // Auto-seed on container startup uses SEED_ONLY_IF_ABSENT=true so restarts
