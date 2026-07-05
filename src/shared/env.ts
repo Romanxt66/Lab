@@ -10,8 +10,12 @@ import { z } from "zod";
  * `assertSmtp()` / `assertCronSecret()`.
  */
 const schema = z.object({
-  // Persistence (Prisma / PostgreSQL connection string).
-  DATABASE_URL: z.string().default(""),
+  // Persistence (Prisma / PostgreSQL connection string). Strip accidental
+  // surrounding quotes/whitespace so a pasted value stays valid.
+  DATABASE_URL: z
+    .string()
+    .default("")
+    .transform((v) => v.trim().replace(/^["']|["']$/g, "")),
 
   // Session signing secret for auth (HMAC). A dev fallback keeps things running
   // locally; ALWAYS set a strong value in production.

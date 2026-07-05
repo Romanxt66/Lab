@@ -20,7 +20,9 @@ function hashPassword(plain: string): string {
 }
 
 async function main() {
-  const url = process.env.DATABASE_URL;
+  const url = (process.env.DATABASE_URL ?? "")
+    .trim()
+    .replace(/^["']|["']$/g, "");
   if (!url) throw new Error("DATABASE_URL no está definido.");
 
   const email = process.env.ADMIN_EMAIL ?? "admin@lab.local";
@@ -28,10 +30,8 @@ async function main() {
     process.env.ADMIN_PASSWORD ??
     randomBytes(18).toString("base64").replace(/[+/=]/g, "").slice(0, 18);
 
-  let schema = "public";
-  try {
-    schema = new URL(url).searchParams.get("schema") ?? "public";
-  } catch {}
+  const schemaMatch = url.match(/[?&]schema=([^&\s]+)/);
+  const schema = schemaMatch ? decodeURIComponent(schemaMatch[1]) : "public";
   const adapter = new PrismaPg({ connectionString: url }, { schema });
   const db = new PrismaClient({ adapter });
 

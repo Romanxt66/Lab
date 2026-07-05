@@ -4,21 +4,19 @@
 //  - Creates that schema if it doesn't exist yet.
 import pg from "pg";
 
-const url = process.env.DATABASE_URL;
+// Strip accidental surrounding quotes/whitespace (common when pasting into a
+// hosting panel), then parse.
+const url = (process.env.DATABASE_URL ?? "").trim().replace(/^["']|["']$/g, "");
 if (!url) {
   console.error("[schema] DATABASE_URL no está definido. Abortando.");
   process.exit(1);
 }
 
-let parsed;
-try {
-  parsed = new URL(url);
-} catch {
-  console.error("[schema] DATABASE_URL no es una URL válida. Abortando.");
-  process.exit(1);
-}
+// Parse the schema param with a regex (postgres connection strings aren't
+// always accepted by the WHATWG URL parser).
+const match = url.match(/[?&]schema=([^&\s]+)/);
+const schema = match ? decodeURIComponent(match[1]) : null;
 
-const schema = parsed.searchParams.get("schema");
 if (!schema || schema === "public") {
   console.error(
     "[schema] DATABASE_URL debe incluir ?schema=<nombre> distinto de 'public'\n" +
@@ -28,16 +26,15 @@ if (!schema || schema === "public") {
   process.exit(1);
 }
 
-// node-postgres doesn't understand the ?schema param — strip it for the client.
-parsed.searchParams.delete("schema");
-const client = new pg.Client({ connectionString: parsed.toString() });
+// pg (node-postgres) ignores the unknown ?schema param, so pass the URL as-is.
+const client = new pg.Client({ connectionString: url });
 
 try {
   await client.connect();
   await client.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
   console.log(`[schema] esquema "${schema}" listo.`);
 } catch (e) {
-  console.error("[schema] no se pudo crear el esquema:", e.message);
+  console.error("[schema] no se pudo preparar el esquema:", e.message);
   process.exit(1);
 } finally {
   await client.end().catch(() => {});

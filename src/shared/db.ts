@@ -14,13 +14,11 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 /** Read the `?schema=` param from the URL so all queries hit the Lab's own
- * PostgreSQL schema (isolated from other projects living in `public`). */
+ * PostgreSQL schema (isolated from other projects living in `public`). Uses a
+ * regex because the WHATWG URL parser rejects some postgres connection strings. */
 function schemaFromUrl(url: string): string {
-  try {
-    return new URL(url).searchParams.get("schema") || "public";
-  } catch {
-    return "public";
-  }
+  const m = url.match(/[?&]schema=([^&\s]+)/);
+  return m ? decodeURIComponent(m[1]) : "public";
 }
 
 function createClient(): PrismaClient {

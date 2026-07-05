@@ -3,12 +3,18 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+// Strip accidental surrounding quotes/whitespace (a common mistake when pasting
+// the value into a hosting panel) so the connection string stays valid.
+const databaseUrl = (process.env["DATABASE_URL"] ?? "")
+  .trim()
+  .replace(/^["']|["']$/g, "");
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: databaseUrl,
   },
 });
