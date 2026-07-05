@@ -10,8 +10,15 @@ import { z } from "zod";
  * `assertSmtp()` / `assertCronSecret()`.
  */
 const schema = z.object({
-  // Persistence (Prisma). Defaults to a local SQLite file.
-  DATABASE_URL: z.string().default("file:./dev.db"),
+  // Persistence (Prisma / PostgreSQL connection string).
+  DATABASE_URL: z.string().default(""),
+
+  // Session signing secret for auth (HMAC). A dev fallback keeps things running
+  // locally; ALWAYS set a strong value in production.
+  SESSION_SECRET: z
+    .string()
+    .min(1)
+    .default("dev-insecure-session-secret-change-me"),
 
   // SMTP (email module). Optional until the email tool is configured.
   SMTP_HOST: z.string().optional(),

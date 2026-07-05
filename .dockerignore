@@ -1,0 +1,25 @@
+# Deps & build output (regenerated inside the image)
+node_modules
+.next
+out
+build
+
+# Prisma generated client (regenerated during build)
+src/generated/prisma
+
+# Secrets & local DB (provided via compose env, never baked into the image)
+.env
+.env.*
+dev.db
+dev.db-journal
+*.sqlite
+
+# VCS / editor / agent files
+.git
+.gitignore
+.claude
+.vscode
+
+# Logs
+npm-debug.log*
+*.log

@@ -26,6 +26,8 @@ import { CalendarService } from "@/modules/calendar/application/calendar-service
 import { PrismaCalendarRepo } from "@/modules/calendar/infrastructure/prisma-calendar-repo";
 import { PrismaUserRepo } from "@/modules/users/infrastructure/prisma-user-repo";
 import type { UserRepoPort } from "@/modules/users/application/ports";
+import { LoginUseCase } from "@/modules/auth/application/login";
+import { verifyPassword } from "@/shared/password";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -109,4 +111,10 @@ export function getCalendarService(): CalendarService {
 
 export function getUserRepo(): UserRepoPort {
   return new PrismaUserRepo();
+}
+
+// --- Auth ------------------------------------------------------------------
+
+export function getLogin(): LoginUseCase {
+  return new LoginUseCase(getUserRepo(), verifyPassword);
 }

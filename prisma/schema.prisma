@@ -8,10 +8,15 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   // Prisma 7: the connection URL lives in prisma.config.ts (for the CLI) and is
   // supplied to PrismaClient at runtime via a driver adapter (see shared/db.ts).
 }
+
+// NOTE: this schema targets a SHARED database that already contains another
+// project's tables. Every Lab-owned table is namespaced via @@map so it can't
+// collide: `calendario` and `usuarioslab` as requested, and `lab_*` for the
+// rest. Use `prisma db push` (never `migrate`) so existing tables are untouched.
 
 /// Reusable email template with `{{variable}}` placeholders.
 model EmailTemplate {
@@ -21,6 +26,8 @@ model EmailTemplate {
   body      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("lab_email_template")
 }
 
 /// History of every email send attempt.
@@ -31,6 +38,8 @@ model EmailLog {
   status  String // "sent" | "failed"
   error   String?
   sentAt  DateTime @default(now())
+
+  @@map("lab_email_log")
 }
 
 /// A cron-scheduled task that runs an action ("email" | "scrape").
@@ -43,6 +52,8 @@ model ScheduledJob {
   enabled   Boolean  @default(true)
   createdAt DateTime @default(now())
   runs      JobRun[]
+
+  @@map("lab_scheduled_job")
 }
 
 /// Result of one execution of a ScheduledJob.
@@ -53,6 +64,8 @@ model JobRun {
   status    String // "success" | "error"
   output    String?
   startedAt DateTime     @default(now())
+
+  @@map("lab_job_run")
 }
 
 /// Lab users (separate table so it won't collide with the other project's
