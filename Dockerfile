@@ -1,8 +1,17 @@
 # syntax=docker/dockerfile:1
 
 # --- Build stage: install all deps and build the Next.js app ---------------
-FROM node:24-alpine AS build
+# Debian slim (glibc), not Alpine: Tailwind v4 (oxide), lightningcss and Next's
+# SWC ship prebuilt glibc binaries, so `next build` works out of the box. On
+# Alpine (musl) those native modules commonly fail to load.
+FROM node:24-slim AS build
 WORKDIR /app
+
+# openssl + CA certs for Prisma and TLS. (pg is pure JS; no compiler toolchain
+# needed since native deps come prebuilt.)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first (better layer caching). Includes devDeps, needed
 # for `next build`, the Prisma CLI and the seed script.
@@ -14,10 +23,13 @@ COPY . .
 RUN npx prisma generate && npm run build
 
 # --- Runtime stage ---------------------------------------------------------
-FROM node:24-alpine AS runner
+FROM node:24-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-# pg is pure-JS; no native build tools needed at runtime.
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copy the built app plus the tooling used on startup (Prisma CLI, tsx for the
 # admin seed). Kept simple over a leaner standalone image on purpose.
