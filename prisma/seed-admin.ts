@@ -31,6 +31,18 @@ async function main() {
   const adapter = new PrismaPg({ connectionString: url });
   const db = new PrismaClient({ adapter });
 
+  // Auto-seed on container startup uses SEED_ONLY_IF_ABSENT=true so restarts
+  // never rotate an existing admin's password. A manual run (without the flag)
+  // upserts, so it can be used to change the password.
+  if (process.env.SEED_ONLY_IF_ABSENT === "true") {
+    const existing = await db.usuariosLab.findUnique({ where: { email } });
+    if (existing) {
+      console.log(`ℹ️  El usuario ${email} ya existe; no se modifica.`);
+      await db.$disconnect();
+      return;
+    }
+  }
+
   const user = await db.usuariosLab.upsert({
     where: { email },
     create: {

@@ -30,9 +30,10 @@ COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/next.config.ts ./next.config.ts
 COPY --from=build /app/tsconfig.json ./tsconfig.json
 COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/docker-entrypoint.sh ./docker-entrypoint.sh
 
 EXPOSE 3000
 
-# On start: create/sync our tables in the (shared) database via `db push`
-# (never migrate — other projects' tables are left untouched), then serve.
-CMD ["sh", "-c", "npx prisma db push --skip-generate && npm run start"]
+# On start: `db push` (create/sync our tables — never migrate, so the shared
+# DB's other tables are untouched), optionally seed the superadmin, then serve.
+CMD ["sh", "docker-entrypoint.sh"]

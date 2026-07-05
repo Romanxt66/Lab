@@ -4,24 +4,25 @@
 # Inside the coolify network the DB is reachable as `postgres-db:5432` (the
 # internal port). The host's 5433 mapping is irrelevant here.
 #
-# First run:
-#   docker compose up -d --build                 # tables are created on startup
-#   docker compose exec lab npm run seed:admin   # create the superadmin (once)
-# Then reach the app on port 3000 (or via your Coolify proxy).
+# Set these environment variables in Coolify (or a local .env, gitignored):
+#   DB_PASSWORD, SESSION_SECRET   (and optionally DB_USER, DB_NAME)
+#
+# After the first deploy, create the superadmin from the container terminal:
+#   npm run seed:admin
 
 services:
   lab:
     build: .
-    container_name: lab_app
     restart: unless-stopped
     environment:
-      # Secrets come from the environment / a local .env file (gitignored) — never
-      # hardcoded here. Internal service name + internal port (5432), NOT host 5433.
+      # Internal service name + internal port (5432), NOT the host's 5433.
       DATABASE_URL: "postgresql://${DB_USER:-admin}:${DB_PASSWORD}@postgres-db:5432/${DB_NAME:-master_db}"
-      SESSION_SECRET: "${SESSION_SECRET:?set SESSION_SECRET in your environment or .env}"
-      NODE_ENV: production
-      TZ: America/Bogota
+      SESSION_SECRET: "${SESSION_SECRET}"
+      NODE_ENV: "production"
+      TZ: "America/Bogota"
       # Optional: SMTP_* and CRON_SECRET for the email/scheduler tools.
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
     ports:
       - "3000:3000"
     networks:
