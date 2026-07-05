@@ -14,7 +14,9 @@ services:
     build: .
     restart: unless-stopped
     environment:
-      DATABASE_URL: "postgresql://${DB_USER:-admin}:${DB_PASSWORD}@postgres-db:5432/${DB_NAME:-master_db}"
+      # Set DATABASE_URL in Coolify to the full connection string, e.g.:
+      #   postgresql://admin:PASSWORD@postgres-db:5432/master_db
+      DATABASE_URL: "${DATABASE_URL}"
       SESSION_SECRET: "${SESSION_SECRET}"
       NODE_ENV: "production"
       TZ: "America/Bogota"
