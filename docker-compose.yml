@@ -1,34 +1,24 @@
-# Lab app — joins the EXISTING "coolify" network and connects to the Postgres
-# that your other compose already manages. It does NOT start its own Postgres.
+# Lab app for Coolify (Docker Compose).
 #
-# Inside the coolify network the DB is reachable as `postgres-db:5432` (the
-# internal port). The host's 5433 mapping is irrelevant here.
+# Networking: Coolify attaches services to its shared "coolify" network, so this
+# app can reach the existing database by its service name `postgres-db` on the
+# internal port 5432 (the host's 5433 is only the published mapping). Enable
+# "Connect To Predefined Network" on this resource in Coolify if it can't
+# resolve postgres-db.
 #
-# Set these environment variables in Coolify (or a local .env, gitignored):
-#   DB_PASSWORD, SESSION_SECRET   (and optionally DB_USER, DB_NAME)
-#
-# After the first deploy, create the superadmin from the container terminal:
-#   npm run seed:admin
+# Set these env vars in Coolify: DB_PASSWORD, SESSION_SECRET, and (optional)
+# ADMIN_EMAIL + ADMIN_PASSWORD to auto-create the superadmin on first deploy.
 
 services:
   lab:
     build: .
     restart: unless-stopped
     environment:
-      # Internal service name + internal port (5432), NOT the host's 5433.
       DATABASE_URL: "postgresql://${DB_USER:-admin}:${DB_PASSWORD}@postgres-db:5432/${DB_NAME:-master_db}"
       SESSION_SECRET: "${SESSION_SECRET}"
       NODE_ENV: "production"
       TZ: "America/Bogota"
-      # Optional: SMTP_* and CRON_SECRET for the email/scheduler tools.
       ADMIN_EMAIL: "${ADMIN_EMAIL:-}"
       ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
     ports:
       - "3000:3000"
-    networks:
-      - coolify
-
-# Reuse the external network created by your database stack.
-networks:
-  coolify:
-    external: true
