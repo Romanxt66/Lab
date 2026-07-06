@@ -104,19 +104,17 @@ export class GmailOAuthAdapter implements AccountMailSenderPort {
     } catch (e) {
       const message =
         e instanceof Error ? e.message : "Error enviando desde Gmail.";
+      // Always log the raw error to the container logs so we can diagnose.
+      console.error("[gmail-oauth] send failed:", message);
+
       if (/invalid_grant/i.test(message)) {
         return err(
-          "La autorización de esta cuenta ha expirado o fue revocada. Vuelve a conectarla desde el panel.",
+          "La autorización de esta cuenta ha expirado o fue revocada. Desconéctala y vuelve a conectarla desde el panel.",
         );
       }
-      // 535-5.7.8 typically means "the app doesn't have Gmail API enabled" or
-      // "the account is in Testing and the refresh_token expired after 7 days".
-      if (/535|BadCredentials|Username and Password not accepted/i.test(message)) {
-        return err(
-          "Gmail rechazó la autenticación. Comprueba que la Gmail API está habilitada en Google Cloud y desconecta/reconecta la cuenta.",
-        );
-      }
-      return err(message);
+      // Include the raw message so it's diagnosable in the UI instead of being
+      // hidden behind a generic string.
+      return err(`Gmail rechazó el envío: ${message}`);
     }
   }
 }
