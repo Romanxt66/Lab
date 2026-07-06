@@ -27,7 +27,19 @@ export class SendEmail {
     private readonly log?: EmailLogPort,
   ) {}
 
-  async execute(input: SendEmailInput): Promise<Result<SendEmailResult>> {
+  execute(input: SendEmailInput): Promise<Result<SendEmailResult>> {
+    return this.executeWithSender(this.sender, input);
+  }
+
+  /**
+   * Same use-case, but with an ad-hoc sender: lets callers pick a different
+   * transport per send (e.g. a specific connected Gmail account) without
+   * rebuilding the whole use-case.
+   */
+  async executeWithSender(
+    sender: MailSenderPort,
+    input: SendEmailInput,
+  ): Promise<Result<SendEmailResult>> {
     const vars = input.variables ?? {};
     const subject = renderTemplate(input.subject, vars);
     const body = renderTemplate(input.body, vars);
@@ -40,7 +52,7 @@ export class SendEmail {
     const errors: string[] = [];
 
     for (const recipient of input.to) {
-      const res = await this.sender.send({ to: [recipient], subject, body });
+      const res = await sender.send({ to: [recipient], subject, body });
       if (res.ok) {
         sent++;
         await this.log?.record({ to: recipient, subject, status: "sent" });

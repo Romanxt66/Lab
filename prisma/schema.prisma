@@ -30,6 +30,23 @@ model EmailTemplate {
   @@map("lab_email_template")
 }
 
+/// Google account connected via OAuth to send email as that user via Gmail.
+/// Stores the long-lived refresh_token; access tokens are minted on demand.
+model GoogleAccount {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String?
+  picture      String?
+  refreshToken String
+  accessToken  String?
+  expiresAt    DateTime?
+  scope        String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("lab_google_account")
+}
+
 /// History of every email send attempt.
 model EmailLog {
   id      String   @id @default(uuid())

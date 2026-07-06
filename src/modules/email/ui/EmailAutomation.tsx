@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Send, Save, Trash2, Loader2, CheckCircle2 } from "lucide-react";
+import { Send, Save, Trash2, Loader2, CheckCircle2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import {
   deleteTemplateAction,
 } from "@/modules/email/actions";
 import type { EmailTemplate } from "@/modules/email/application/ports";
+import { GoogleAccountsPanel } from "./GoogleAccountsPanel";
 
 export function EmailAutomation() {
   const [templates, setTemplates] = React.useState<EmailTemplate[]>([]);
@@ -24,6 +25,7 @@ export function EmailAutomation() {
   const [subject, setSubject] = React.useState("");
   const [body, setBody] = React.useState("");
   const [vars, setVars] = React.useState<Record<string, string>>({});
+  const [googleAccountId, setGoogleAccountId] = React.useState("");
 
   const [sending, setSending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -81,7 +83,13 @@ export function EmailAutomation() {
     setSuccess(null);
     setSending(true);
     try {
-      const res = await sendEmailAction({ recipients, subject, body, variables: vars });
+      const res = await sendEmailAction({
+        recipients,
+        subject,
+        body,
+        variables: vars,
+        googleAccountId: googleAccountId || undefined,
+      });
       if (res.ok) {
         setSuccess(
           `Enviado a ${res.value.sent} destinatario(s)` +
@@ -99,6 +107,8 @@ export function EmailAutomation() {
     <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
       {/* Composer */}
       <div className="space-y-5">
+        <FromIndicator accountId={googleAccountId} />
+
         <div className="space-y-1.5">
           <Label htmlFor="recipients">Destinatarios</Label>
           <Textarea
@@ -175,8 +185,21 @@ export function EmailAutomation() {
         </div>
       </div>
 
-      {/* Templates sidebar */}
+      {/* Sidebar: Google accounts + templates */}
       <aside className="space-y-4">
+        <div className="rounded-lg border border-border p-4">
+          <React.Suspense
+            fallback={
+              <p className="text-xs text-muted-foreground">Cargando cuentas…</p>
+            }
+          >
+            <GoogleAccountsPanel
+              selectedId={googleAccountId}
+              onSelect={setGoogleAccountId}
+            />
+          </React.Suspense>
+        </div>
+
         <div className="rounded-lg border border-border p-4">
           <h3 className="mb-3 text-sm font-medium">Plantillas</h3>
           {templates.length === 0 ? (
@@ -225,11 +248,43 @@ export function EmailAutomation() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          El envío usa el SMTP configurado en{" "}
-          <code className="font-mono">.env.local</code>. Sin configurar, verás
-          un aviso al enviar.
+          Si seleccionas una cuenta de Google, el envío se hará desde esa cuenta
+          por Gmail. Sin cuenta seleccionada, se usa el SMTP configurado en{" "}
+          <code className="font-mono">.env.local</code>.
         </p>
       </aside>
+    </div>
+  );
+}
+
+/** Small badge showing which identity will be used for the send. */
+function FromIndicator({ accountId }: { accountId: string }) {
+  const [label, setLabel] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let live = true;
+    if (!accountId) {
+      setLabel(null);
+      return;
+    }
+    import("@/modules/email/actions").then(async (m) => {
+      const list = await m.listGoogleAccountsAction();
+      if (!live) return;
+      const found = list.find((a) => a.id === accountId);
+      setLabel(found?.email ?? null);
+    });
+    return () => {
+      live = false;
+    };
+  }, [accountId]);
+
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+      <Mail className="size-3.5" />
+      <span>Enviando desde:</span>
+      <span className="font-medium text-foreground">
+        {label ?? "SMTP (.env.local)"}
+      </span>
     </div>
   );
 }

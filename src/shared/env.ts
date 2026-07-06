@@ -34,6 +34,14 @@ const schema = z.object({
   // Scheduler: shared secret protecting the cron HTTP trigger in prod.
   CRON_SECRET: z.string().optional(),
 
+  // Google OAuth (Gmail send). Set these to enable the "Sign in with Google"
+  // flow in the email module.
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  /** e.g. https://your-domain.com/api/auth/google/callback — must match the
+   *  redirect URI registered in Google Cloud Console EXACTLY. */
+  GOOGLE_REDIRECT_URI: z.string().optional(),
+
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
@@ -50,6 +58,17 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+
+/** Throws if Google OAuth is not fully configured. */
+export function assertGoogleOAuth() {
+  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } = env;
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REDIRECT_URI) {
+    throw new Error(
+      "Google OAuth no está configurado. Define GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET y GOOGLE_REDIRECT_URI en las variables de entorno.",
+    );
+  }
+  return { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI };
+}
 
 /** Throws a friendly error if SMTP is not fully configured. */
 export function assertSmtp() {

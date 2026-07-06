@@ -6,7 +6,13 @@ import {
   PrismaTemplateRepo,
   PrismaEmailLog,
 } from "@/modules/email/infrastructure/prisma-template-repo";
-import type { TemplateRepoPort } from "@/modules/email/application/ports";
+import type {
+  TemplateRepoPort,
+  GoogleAccountRepoPort,
+  AccountMailSenderPort,
+} from "@/modules/email/application/ports";
+import { PrismaGoogleAccountRepo } from "@/modules/email/infrastructure/prisma-google-account-repo";
+import { GmailOAuthAdapter } from "@/modules/email/infrastructure/gmail-oauth-adapter";
 import { parseRecipients } from "@/modules/email/domain/email";
 import { RunScrape } from "@/modules/scraper/application/run-scrape";
 import { FetchWebFetcher } from "@/modules/scraper/infrastructure/fetch-web-fetcher";
@@ -43,6 +49,14 @@ export function getTemplateRepo(): TemplateRepoPort {
 
 export function getSendEmail(): SendEmail {
   return new SendEmail(new NodemailerAdapter(), new PrismaEmailLog());
+}
+
+export function getGoogleAccountRepo(): GoogleAccountRepoPort {
+  return new PrismaGoogleAccountRepo();
+}
+
+export function getGmailOAuthSender(): AccountMailSenderPort {
+  return new GmailOAuthAdapter(getGoogleAccountRepo());
 }
 
 // --- Scraper ---------------------------------------------------------------
