@@ -1,5 +1,5 @@
 import "server-only";
-import nodemailer, { type Transporter } from "nodemailer";
+import nodemailer from "nodemailer";
 import { type Result, ok, err } from "@/shared/kernel/result";
 import { assertGoogleOAuth } from "@/shared/env";
 import { db } from "@/shared/db";
@@ -11,12 +11,15 @@ import type {
 } from "@/modules/email/application/ports";
 
 /**
- * AccountMailSenderPort backed by Nodemailer + XOAUTH2 against Gmail SMTP.
+ * AccountMailSenderPort backed by the Gmail REST API + OAuth2.
  *
- * We refresh the access token ourselves (rather than letting Nodemailer do it)
- * so we can persist the fresh token/expiry, and never pass a stale token that
- * would make Gmail reject the SMTP auth with "535-5.7.8 Username and Password
- * not accepted".
+ * Gmail's SMTP endpoint (XOAUTH2) rejects `gmail.send` scoped tokens with a
+ * generic "535-5.7.8 Username and Password not accepted" — it wants the wider
+ * `https://mail.google.com/` scope for SMTP. Sending via the REST API keeps
+ * the scope minimal (`gmail.send`) and works reliably.
+ *
+ * Flow: build the raw RFC 5322 message with Nodemailer's stream transport,
+ * base64url-encode it, POST to Gmail users.messages.send.
  */
 export class GmailOAuthAdapter implements AccountMailSenderPort {
   constructor(private readonly accounts: GoogleAccountRepoPort) {}
@@ -29,7 +32,7 @@ export class GmailOAuthAdapter implements AccountMailSenderPort {
     if (!account) return err("Cuenta de Google no encontrada.");
     if (!account.refreshToken) {
       return err(
-        "La cuenta no tiene refresh_token. Vuelve a conectarla desde el panel.",
+        "La cuenta no tiene refresh_token. Desconéctala y vuelve a conectarla.",
       );
     }
 
@@ -40,15 +43,13 @@ export class GmailOAuthAdapter implements AccountMailSenderPort {
       return err(e instanceof Error ? e.message : "Google OAuth no configurado.");
     }
 
-    // Ensure a fresh access token before hitting Gmail. Refresh with a small
-    // safety margin so we don't send with a token that's about to expire.
+    // 1) Ensure a fresh access token (with a small safety margin).
     let accessToken = account.accessToken;
     const expiresAt = account.expiresAt;
-    const marginMs = 60_000;
     if (
       !accessToken ||
       !expiresAt ||
-      expiresAt.getTime() - Date.now() < marginMs
+      expiresAt.getTime() - Date.now() < 60_000
     ) {
       try {
         const refreshed = await refreshAccessToken(
@@ -60,7 +61,6 @@ export class GmailOAuthAdapter implements AccountMailSenderPort {
           account.refreshToken,
         );
         accessToken = refreshed.accessToken;
-        // Persist so the next send reuses the same token until it expires.
         await db.googleAccount.update({
           where: { id: account.id },
           data: {
@@ -70,28 +70,26 @@ export class GmailOAuthAdapter implements AccountMailSenderPort {
         });
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
+        console.error("[gmail-oauth] refresh failed:", message);
         if (/invalid_grant/i.test(message)) {
           return err(
-            "La autorización de esta cuenta ha expirado o fue revocada. Vuelve a conectarla desde el panel.",
+            "La autorización expiró o fue revocada. Desconéctala y vuelve a conectarla.",
           );
         }
         return err(`No se pudo refrescar el token de Google: ${message}`);
       }
     }
 
+    // 2) Build the raw RFC 5322 message (Nodemailer stream transport returns
+    //    the built message without actually sending it).
+    let rawMessage: Buffer;
     try {
-      const transporter: Transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 465,
-        secure: true,
-        auth: {
-          type: "OAuth2",
-          user: account.email,
-          accessToken: accessToken!,
-        },
+      const transporter = nodemailer.createTransport({
+        streamTransport: true,
+        newline: "unix",
+        buffer: true,
       });
-
-      await transporter.sendMail({
+      const info = await transporter.sendMail({
         from: account.name
           ? `"${account.name}" <${account.email}>`
           : account.email,
@@ -100,20 +98,55 @@ export class GmailOAuthAdapter implements AccountMailSenderPort {
         text: msg.body,
         html: toHtml(msg.body),
       });
+      rawMessage = info.message as Buffer;
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.error("[gmail-oauth] compose failed:", message);
+      return err(`No se pudo construir el mensaje: ${message}`);
+    }
+
+    // 3) POST to Gmail users.messages.send.
+    const raw = rawMessage
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    try {
+      const res = await fetch(
+        "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ raw }),
+        },
+      );
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        console.error(
+          "[gmail-oauth] gmail api error:",
+          res.status,
+          detail,
+        );
+        if (res.status === 401) {
+          return err(
+            "Gmail rechazó el token (401). Desconecta la cuenta y vuélvela a conectar.",
+          );
+        }
+        if (res.status === 403) {
+          return err(
+            "Gmail denegó el envío (403). Verifica que la Gmail API está habilitada y que la cuenta autorizó el permiso 'Send email on your behalf'.",
+          );
+        }
+        return err(`Gmail rechazó el envío (${res.status}): ${detail}`);
+      }
       return ok(undefined);
     } catch (e) {
-      const message =
-        e instanceof Error ? e.message : "Error enviando desde Gmail.";
-      // Always log the raw error to the container logs so we can diagnose.
+      const message = e instanceof Error ? e.message : String(e);
       console.error("[gmail-oauth] send failed:", message);
-
-      if (/invalid_grant/i.test(message)) {
-        return err(
-          "La autorización de esta cuenta ha expirado o fue revocada. Desconéctala y vuelve a conectarla desde el panel.",
-        );
-      }
-      // Include the raw message so it's diagnosable in the UI instead of being
-      // hidden behind a generic string.
       return err(`Gmail rechazó el envío: ${message}`);
     }
   }
