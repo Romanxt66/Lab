@@ -1,5 +1,5 @@
 import type { CalendarRepoPort } from "./ports";
-import type { SendWhatsAppMessage } from "@/modules/whatsapp/application/send-message";
+import type { SendNotification } from "@/modules/notifications/application/send-notification";
 import type { CalendarEvent } from "@/modules/calendar/domain/event";
 
 export interface ReminderRunSummary {
@@ -10,14 +10,14 @@ export interface ReminderRunSummary {
 }
 
 /**
- * ProcessCalendarReminders: find events whose reminder is due, send a
- * WhatsApp message, and mark them as notified. Idempotent thanks to
+ * ProcessCalendarReminders: find events whose reminder is due, dispatch a
+ * notification, and mark them as notified. Idempotent thanks to
  * `reminderSentAt`. Runs every minute from the scheduler.
  */
 export class ProcessCalendarReminders {
   constructor(
     private readonly calendar: CalendarRepoPort,
-    private readonly whatsapp: SendWhatsAppMessage,
+    private readonly notifier: SendNotification,
   ) {}
 
   async execute(now: Date = new Date()): Promise<ReminderRunSummary> {
@@ -30,7 +30,7 @@ export class ProcessCalendarReminders {
     };
 
     for (const event of pending) {
-      const res = await this.whatsapp.execute(formatReminder(event));
+      const res = await this.notifier.execute(formatReminder(event));
       if (res.ok) {
         summary.sent++;
         await this.calendar.markReminderSent(event.id, now);

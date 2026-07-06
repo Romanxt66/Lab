@@ -12,7 +12,7 @@ import {
   CalendarClock,
   CalendarDays,
   Regex,
-  MessageCircle,
+  Send,
   Bell,
 } from "lucide-react";
 import { JsonFormatter } from "@/modules/dev-utils/ui/JsonFormatter";
@@ -25,7 +25,7 @@ import { EmailAutomation } from "@/modules/email/ui/EmailAutomation";
 import { ScraperTool } from "@/modules/scraper/ui/ScraperTool";
 import { JobScheduler } from "@/modules/scheduler/ui/JobScheduler";
 import { CalendarTool } from "@/modules/calendar/ui/CalendarTool";
-import { WhatsAppSettings } from "@/modules/whatsapp/ui/WhatsAppSettings";
+import { NotificationSettings } from "@/modules/notifications/ui/NotificationSettings";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -167,14 +167,14 @@ export const TOOLS: ToolMeta[] = [
     Component: CalendarTool,
   },
   {
-    slug: "whatsapp",
-    name: "WhatsApp",
+    slug: "telegram",
+    name: "Telegram",
     description:
-      "Configura el envío de recordatorios de calendario a tu WhatsApp.",
+      "Recibe recordatorios del calendario en Telegram vía un bot propio.",
     category: "notifications",
-    icon: MessageCircle,
+    icon: Send,
     status: "ready",
-    Component: WhatsAppSettings,
+    Component: NotificationSettings,
   },
 ];
 

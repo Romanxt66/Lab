@@ -469,7 +469,7 @@ function EventForm({
         className="min-h-16 font-sans"
       />
       <div className="space-y-1">
-        <Label className="text-xs">Recordatorio (WhatsApp)</Label>
+        <Label className="text-xs">Recordatorio (Telegram)</Label>
         <select
           value={remindMinutesBefore === "none" ? "none" : String(remindMinutesBefore)}
           onChange={(e) => {

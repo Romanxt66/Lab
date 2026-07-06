@@ -3,12 +3,12 @@ import { ProcessCalendarReminders } from "./application/process-reminders";
 import type { CalendarRepoPort } from "./application/ports";
 import type { CalendarEvent, EventInput } from "./domain/event";
 import { ok, err, type Result } from "@/shared/kernel/result";
-import { SendWhatsAppMessage } from "@/modules/whatsapp/application/send-message";
+import { SendNotification } from "@/modules/notifications/application/send-notification";
 import type {
-  WhatsAppConfigRepoPort,
-  WhatsAppNotifierPort,
-} from "@/modules/whatsapp/application/ports";
-import type { WhatsAppConfig } from "@/modules/whatsapp/domain/config";
+  NotificationConfigRepoPort,
+  NotificationSenderPort,
+} from "@/modules/notifications/application/ports";
+import type { NotificationConfig } from "@/modules/notifications/domain/config";
 
 class FakeCalRepo implements CalendarRepoPort {
   marked: { id: string; at: Date }[] = [];
@@ -34,46 +34,44 @@ class FakeCalRepo implements CalendarRepoPort {
   }
 }
 
-const config: WhatsAppConfig = {
+const config: NotificationConfig = {
   id: "c1",
-  provider: "callmebot",
-  phone: "573001234567",
-  apiKey: "k",
+  provider: "telegram",
+  recipient: "123",
+  credential: "k:AABBCC-Ddefghij_klmnop_qrstuvwxyz",
   active: true,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
 
-class OkNotifier implements WhatsAppNotifierPort {
+class OkSender implements NotificationSenderPort {
   sent: string[] = [];
-  async send(_p: string, _ph: string, _k: string, m: string): Promise<Result<void>> {
+  async send(_p: string, _r: string, _c: string, m: string): Promise<Result<void>> {
     this.sent.push(m);
     return ok(undefined);
   }
 }
 
-class FailNotifier implements WhatsAppNotifierPort {
+class FailSender implements NotificationSenderPort {
   async send(): Promise<Result<void>> {
     return err("network");
   }
 }
 
-class Repo implements WhatsAppConfigRepoPort {
+class Repo implements NotificationConfigRepoPort {
   async list() {
     return [config];
   }
   async getActive() {
     return config;
   }
-  async upsert(): Promise<WhatsAppConfig> {
+  async upsert(): Promise<NotificationConfig> {
     throw new Error("nope");
   }
   async remove() {}
 }
 
-function event(
-  over: Partial<CalendarEvent> = {},
-): CalendarEvent {
+function event(over: Partial<CalendarEvent> = {}): CalendarEvent {
   return {
     id: over.id ?? "e1",
     title: over.title ?? "Reunión",
@@ -94,24 +92,24 @@ describe("ProcessCalendarReminders", () => {
       event({ id: "a", title: "A" }),
       event({ id: "b", title: "B" }),
     ]);
-    const notifier = new OkNotifier();
+    const sender = new OkSender();
     const svc = new ProcessCalendarReminders(
       cal,
-      new SendWhatsAppMessage(notifier, new Repo()),
+      new SendNotification(sender, new Repo()),
     );
     const summary = await svc.execute(new Date());
     expect(summary.processed).toBe(2);
     expect(summary.sent).toBe(2);
     expect(summary.failed).toBe(0);
     expect(cal.marked.map((m) => m.id).sort()).toEqual(["a", "b"]);
-    expect(notifier.sent[0]).toMatch(/Recordatorio: A/);
+    expect(sender.sent[0]).toMatch(/Recordatorio: A/);
   });
 
   it("does not mark reminders that failed to send", async () => {
     const cal = new FakeCalRepo([event({ id: "x", title: "X" })]);
     const svc = new ProcessCalendarReminders(
       cal,
-      new SendWhatsAppMessage(new FailNotifier(), new Repo()),
+      new SendNotification(new FailSender(), new Repo()),
     );
     const summary = await svc.execute(new Date());
     expect(summary.sent).toBe(0);

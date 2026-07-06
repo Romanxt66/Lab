@@ -122,16 +122,18 @@ model Calendario {
   @@map("calendario")
 }
 
-/// WhatsApp notification config. Only one active row at a time is expected;
-/// the app sends reminders to whichever row has `active = true`.
-model WhatsAppConfig {
-  id        String   @id @default(uuid())
-  provider  String   @default("callmebot") // "callmebot" for now
-  phone     String // international format without leading + (e.g. 573001234567)
-  apiKey    String
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+/// Notification channel config. Only one active row at a time is expected;
+/// the calendar reminder job sends to whichever row has `active = true`.
+/// `provider` decides how `recipient` and `credential` are interpreted:
+///   - telegram: recipient = chat_id, credential = bot_token
+model NotificationConfig {
+  id         String   @id @default(uuid())
+  provider   String   @default("telegram")
+  recipient  String
+  credential String
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@map("lab_whatsapp_config")
+  @@map("lab_notification_config")
 }

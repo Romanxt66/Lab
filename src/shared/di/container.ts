@@ -13,10 +13,10 @@ import type {
 } from "@/modules/email/application/ports";
 import { PrismaGoogleAccountRepo } from "@/modules/email/infrastructure/prisma-google-account-repo";
 import { GmailOAuthAdapter } from "@/modules/email/infrastructure/gmail-oauth-adapter";
-import { SendWhatsAppMessage } from "@/modules/whatsapp/application/send-message";
-import { CallMeBotAdapter } from "@/modules/whatsapp/infrastructure/callmebot-adapter";
-import { PrismaWhatsAppConfigRepo } from "@/modules/whatsapp/infrastructure/prisma-whatsapp-config-repo";
-import type { WhatsAppConfigRepoPort } from "@/modules/whatsapp/application/ports";
+import { SendNotification } from "@/modules/notifications/application/send-notification";
+import { TelegramAdapter } from "@/modules/notifications/infrastructure/telegram-adapter";
+import { PrismaNotificationConfigRepo } from "@/modules/notifications/infrastructure/prisma-notification-config-repo";
+import type { NotificationConfigRepoPort } from "@/modules/notifications/application/ports";
 import { parseRecipients } from "@/modules/email/domain/email";
 import { RunScrape } from "@/modules/scraper/application/run-scrape";
 import { FetchWebFetcher } from "@/modules/scraper/infrastructure/fetch-web-fetcher";
@@ -64,16 +64,16 @@ export function getGmailOAuthSender(): AccountMailSenderPort {
   return new GmailOAuthAdapter(getGoogleAccountRepo());
 }
 
-// --- WhatsApp -------------------------------------------------------------
+// --- Notifications --------------------------------------------------------
 
-export function getWhatsAppConfigRepo(): WhatsAppConfigRepoPort {
-  return new PrismaWhatsAppConfigRepo();
+export function getNotificationConfigRepo(): NotificationConfigRepoPort {
+  return new PrismaNotificationConfigRepo();
 }
 
-export function getSendWhatsApp(): SendWhatsAppMessage {
-  return new SendWhatsAppMessage(
-    new CallMeBotAdapter(),
-    getWhatsAppConfigRepo(),
+export function getSendNotification(): SendNotification {
+  return new SendNotification(
+    new TelegramAdapter(),
+    getNotificationConfigRepo(),
   );
 }
 
@@ -142,7 +142,7 @@ export function getCalendarService(): CalendarService {
 export function getProcessCalendarReminders(): ProcessCalendarReminders {
   return new ProcessCalendarReminders(
     new PrismaCalendarRepo(),
-    getSendWhatsApp(),
+    getSendNotification(),
   );
 }
 
