@@ -12,6 +12,8 @@ import {
   CalendarClock,
   CalendarDays,
   Regex,
+  MessageCircle,
+  Bell,
 } from "lucide-react";
 import { JsonFormatter } from "@/modules/dev-utils/ui/JsonFormatter";
 import { Base64Tool } from "@/modules/dev-utils/ui/Base64Tool";
@@ -23,6 +25,7 @@ import { EmailAutomation } from "@/modules/email/ui/EmailAutomation";
 import { ScraperTool } from "@/modules/scraper/ui/ScraperTool";
 import { JobScheduler } from "@/modules/scheduler/ui/JobScheduler";
 import { CalendarTool } from "@/modules/calendar/ui/CalendarTool";
+import { WhatsAppSettings } from "@/modules/whatsapp/ui/WhatsAppSettings";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -37,7 +40,8 @@ export type ToolCategory =
   | "dev-utils"
   | "scraper"
   | "scheduler"
-  | "calendar";
+  | "calendar"
+  | "notifications";
 
 export interface CategoryMeta {
   id: ToolCategory;
@@ -49,6 +53,7 @@ export const CATEGORIES: Record<ToolCategory, CategoryMeta> = {
   "dev-utils": { id: "dev-utils", label: "Utilidades de dev", icon: Wrench },
   calendar: { id: "calendar", label: "Calendario", icon: CalendarDays },
   email: { id: "email", label: "Correos", icon: Mail },
+  notifications: { id: "notifications", label: "Notificaciones", icon: Bell },
   scraper: { id: "scraper", label: "Scraping / APIs", icon: Globe },
   scheduler: { id: "scheduler", label: "Tareas programadas", icon: Clock },
 };
@@ -160,6 +165,16 @@ export const TOOLS: ToolMeta[] = [
     icon: CalendarDays,
     status: "ready",
     Component: CalendarTool,
+  },
+  {
+    slug: "whatsapp",
+    name: "WhatsApp",
+    description:
+      "Configura el envío de recordatorios de calendario a tu WhatsApp.",
+    category: "notifications",
+    icon: MessageCircle,
+    status: "ready",
+    Component: WhatsAppSettings,
   },
 ];
 

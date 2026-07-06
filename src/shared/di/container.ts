@@ -13,6 +13,10 @@ import type {
 } from "@/modules/email/application/ports";
 import { PrismaGoogleAccountRepo } from "@/modules/email/infrastructure/prisma-google-account-repo";
 import { GmailOAuthAdapter } from "@/modules/email/infrastructure/gmail-oauth-adapter";
+import { SendWhatsAppMessage } from "@/modules/whatsapp/application/send-message";
+import { CallMeBotAdapter } from "@/modules/whatsapp/infrastructure/callmebot-adapter";
+import { PrismaWhatsAppConfigRepo } from "@/modules/whatsapp/infrastructure/prisma-whatsapp-config-repo";
+import type { WhatsAppConfigRepoPort } from "@/modules/whatsapp/application/ports";
 import { parseRecipients } from "@/modules/email/domain/email";
 import { RunScrape } from "@/modules/scraper/application/run-scrape";
 import { FetchWebFetcher } from "@/modules/scraper/infrastructure/fetch-web-fetcher";
@@ -30,6 +34,7 @@ import type {
 } from "@/modules/scheduler/application/ports";
 import { CalendarService } from "@/modules/calendar/application/calendar-service";
 import { PrismaCalendarRepo } from "@/modules/calendar/infrastructure/prisma-calendar-repo";
+import { ProcessCalendarReminders } from "@/modules/calendar/application/process-reminders";
 import { PrismaUserRepo } from "@/modules/users/infrastructure/prisma-user-repo";
 import type { UserRepoPort } from "@/modules/users/application/ports";
 import { LoginUseCase } from "@/modules/auth/application/login";
@@ -57,6 +62,19 @@ export function getGoogleAccountRepo(): GoogleAccountRepoPort {
 
 export function getGmailOAuthSender(): AccountMailSenderPort {
   return new GmailOAuthAdapter(getGoogleAccountRepo());
+}
+
+// --- WhatsApp -------------------------------------------------------------
+
+export function getWhatsAppConfigRepo(): WhatsAppConfigRepoPort {
+  return new PrismaWhatsAppConfigRepo();
+}
+
+export function getSendWhatsApp(): SendWhatsAppMessage {
+  return new SendWhatsAppMessage(
+    new CallMeBotAdapter(),
+    getWhatsAppConfigRepo(),
+  );
 }
 
 // --- Scraper ---------------------------------------------------------------
@@ -119,6 +137,13 @@ export function getRunDueJobs(): RunDueJobs {
 
 export function getCalendarService(): CalendarService {
   return new CalendarService(new PrismaCalendarRepo());
+}
+
+export function getProcessCalendarReminders(): ProcessCalendarReminders {
+  return new ProcessCalendarReminders(
+    new PrismaCalendarRepo(),
+    getSendWhatsApp(),
+  );
 }
 
 // --- Users -----------------------------------------------------------------

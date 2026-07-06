@@ -374,6 +374,11 @@ function EventForm({
   );
   const [description, setDescription] = React.useState(event?.description ?? "");
   const [location, setLocation] = React.useState(event?.location ?? "");
+  const [remindMinutesBefore, setRemindMinutesBefore] = React.useState<number | "none">(
+    typeof event?.remindMinutesBefore === "number"
+      ? event.remindMinutesBefore
+      : "none",
+  );
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
 
@@ -397,6 +402,8 @@ function EventForm({
         start: start.toISOString(),
         end: end ? end.toISOString() : null,
         allDay,
+        remindMinutesBefore:
+          remindMinutesBefore === "none" ? null : remindMinutesBefore,
       };
       const res = await saveEventAction(input);
       if (res.ok) await onSaved();
@@ -461,6 +468,26 @@ function EventForm({
         placeholder="Descripción (opcional)"
         className="min-h-16 font-sans"
       />
+      <div className="space-y-1">
+        <Label className="text-xs">Recordatorio (WhatsApp)</Label>
+        <select
+          value={remindMinutesBefore === "none" ? "none" : String(remindMinutesBefore)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setRemindMinutesBefore(v === "none" ? "none" : Number(v));
+          }}
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+        >
+          <option value="none">Sin recordatorio</option>
+          <option value="0">Al comenzar</option>
+          <option value="5">5 minutos antes</option>
+          <option value="15">15 minutos antes</option>
+          <option value="30">30 minutos antes</option>
+          <option value="60">1 hora antes</option>
+          <option value="120">2 horas antes</option>
+          <option value="1440">1 día antes</option>
+        </select>
+      </div>
       {error ? <ErrorNote>{error}</ErrorNote> : null}
       <div className="flex gap-2">
         <Button size="sm" onClick={save} disabled={saving} className="flex-1">

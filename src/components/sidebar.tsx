@@ -11,6 +11,7 @@ const CATEGORY_ORDER: ToolCategory[] = [
   "dev-utils",
   "calendar",
   "email",
+  "notifications",
   "scraper",
   "scheduler",
 ];

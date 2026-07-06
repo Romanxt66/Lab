@@ -8,11 +8,14 @@ export interface EventInput {
   allDay: boolean;
   location?: string | null;
   color?: string | null;
+  /** null = no reminder. */
+  remindMinutesBefore?: number | null;
 }
 
 export interface CalendarEvent extends EventInput {
   id: string;
   createdAt: Date;
+  reminderSentAt?: Date | null;
 }
 
 /** Serializable form sent to the client (dates as ISO strings). */
@@ -25,6 +28,7 @@ export interface EventDTO {
   allDay: boolean;
   location: string | null;
   color: string | null;
+  remindMinutesBefore: number | null;
 }
 
 export function toDTO(e: CalendarEvent): EventDTO {
@@ -37,6 +41,7 @@ export function toDTO(e: CalendarEvent): EventDTO {
     allDay: e.allDay,
     location: e.location ?? null,
     color: e.color ?? null,
+    remindMinutesBefore: e.remindMinutesBefore ?? null,
   };
 }
 

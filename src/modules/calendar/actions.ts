@@ -22,6 +22,8 @@ export interface SaveEventInput {
   allDay: boolean;
   location?: string;
   color?: string | null;
+  /** null / undefined = no reminder. */
+  remindMinutesBefore?: number | null;
 }
 
 export async function saveEventAction(
@@ -35,6 +37,10 @@ export async function saveEventAction(
     allDay: input.allDay,
     location: input.location ?? null,
     color: input.color ?? null,
+    remindMinutesBefore:
+      typeof input.remindMinutesBefore === "number"
+        ? input.remindMinutesBefore
+        : null,
   };
   const svc = getCalendarService();
   const res = input.id

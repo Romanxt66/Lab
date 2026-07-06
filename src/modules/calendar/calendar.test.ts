@@ -45,6 +45,10 @@ class FakeRepo implements CalendarRepoPort {
     return { ...input, id, createdAt: new Date() };
   }
   async remove() {}
+  async listPendingReminders(): Promise<CalendarEvent[]> {
+    return [];
+  }
+  async markReminderSent(): Promise<void> {}
 }
 
 describe("CalendarService", () => {
