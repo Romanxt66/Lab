@@ -166,7 +166,7 @@ export function WhatsAppSettings() {
                 1
               </span>
               Añade este contacto a tu WhatsApp:{" "}
-              <strong className="text-foreground">+34 644 51 95 30</strong>
+              <strong className="text-foreground">+34 611 01 16 37</strong>
             </li>
             <li>
               <span className="mr-1.5 rounded bg-foreground/10 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
