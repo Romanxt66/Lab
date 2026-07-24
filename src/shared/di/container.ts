@@ -54,6 +54,10 @@ import {
   GoogleAccountsProvider,
   RecentEmailsProvider,
 } from "@/modules/dashboard/application/lab-providers";
+import {
+  SqlMetricProvider,
+  SqlTableProvider,
+} from "@/modules/dashboard/application/sql-providers";
 import type { WidgetDataProvider } from "@/modules/dashboard/application/ports";
 import type { WidgetType } from "@/modules/dashboard/domain/widget-types";
 import { db as sharedDb } from "@/shared/db";
@@ -172,6 +176,8 @@ export function getDashboardService(): DashboardService {
     "lab-recent-jobs": new RecentJobsProvider(new PrismaJobRunRepo()),
     "lab-google-accounts": new GoogleAccountsProvider(new PrismaGoogleAccountRepo()),
     "lab-recent-emails": new RecentEmailsProvider(sharedDb),
+    "sql-metric": new SqlMetricProvider(getDbAdminService()),
+    "sql-table": new SqlTableProvider(getDbAdminService()),
   };
   return new DashboardService(
     new PrismaDashboardRepo(),

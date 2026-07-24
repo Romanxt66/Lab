@@ -28,6 +28,7 @@ import type {
 } from "@/modules/dashboard/domain/dashboard";
 import {
   LAB_WIDGET_TYPES,
+  SQL_WIDGET_TYPES,
   WIDGET_LABELS,
   type WidgetType,
 } from "@/modules/dashboard/domain/widget-types";
@@ -37,6 +38,11 @@ import {
   GoogleAccountsWidget,
   RecentEmailsWidget,
 } from "./widgets/LabWidgets";
+import { SqlMetricWidget, SqlTableWidget } from "./widgets/SqlWidgets";
+import { listConnectionsAction } from "@/modules/db-admin/actions";
+import type { DbConnectionDTO } from "@/modules/db-admin/domain/connection";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 export function DashboardTool() {
   const [dashboards, setDashboards] = React.useState<DashboardDTO[]>([]);
@@ -338,23 +344,40 @@ function WidgetPicker({
   onClose: () => void;
   onAdded: () => void | Promise<void>;
 }) {
+  const [tab, setTab] = React.useState<"lab" | "sql">("lab");
   const [type, setType] = React.useState<WidgetType>("lab-upcoming-events");
   const [title, setTitle] = React.useState(WIDGET_LABELS["lab-upcoming-events"]);
+  const [connectionId, setConnectionId] = React.useState("");
+  const [sql, setSql] = React.useState("");
+  const [connections, setConnections] = React.useState<DbConnectionDTO[]>([]);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setTitle(WIDGET_LABELS[type]);
+    if (type.startsWith("sql-") && connections.length === 0) {
+      void listConnectionsAction().then((list) => {
+        setConnections(list);
+        if (list[0] && !connectionId) setConnectionId(list[0].id);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
+
+  const isSql = type.startsWith("sql-");
 
   async function add() {
     setError(null);
     setSaving(true);
     try {
+      const config = isSql
+        ? JSON.stringify({ connectionId, sql })
+        : "{}";
       const res = await addWidgetAction({
         dashboardId,
         type,
         title,
+        config,
       });
       if (res.ok) await onAdded();
       else setError(res.error);
@@ -363,11 +386,37 @@ function WidgetPicker({
     }
   }
 
+  const availableTypes =
+    tab === "lab" ? LAB_WIDGET_TYPES : SQL_WIDGET_TYPES;
+
   return (
     <div className="glass rounded-lg border border-border/60 p-4">
       <h3 className="mb-3 text-sm font-medium">Añadir widget</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {LAB_WIDGET_TYPES.map((t) => (
+
+      <div className="mb-3 inline-flex rounded-md border border-border p-0.5">
+        {(["lab", "sql"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => {
+              setTab(t);
+              setType(
+                t === "lab" ? "lab-upcoming-events" : "sql-metric",
+              );
+            }}
+            className={cn(
+              "rounded px-3 py-1 text-xs transition-colors",
+              tab === t
+                ? "bg-accent font-medium text-accent-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {t === "lab" ? "Del Lab" : "SQL"}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {availableTypes.map((t) => (
           <button
             key={t}
             onClick={() => setType(t)}
@@ -380,20 +429,83 @@ function WidgetPicker({
           >
             <span className="font-medium">{WIDGET_LABELS[t]}</span>
             <span className="text-[11px] text-muted-foreground">
-              Datos del Lab
+              {t.startsWith("lab-") ? "Datos del Lab" : "SQL sobre una conexión"}
             </span>
           </button>
         ))}
       </div>
-      <div className="mt-4 space-y-2">
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Título del widget"
-        />
+
+      <div className="mt-4 space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="widget-title">Título</Label>
+          <Input
+            id="widget-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Título del widget"
+          />
+        </div>
+
+        {isSql ? (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="widget-conn">Conexión</Label>
+              {connections.length === 0 ? (
+                <p className="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+                  Aún no tienes conexiones. Crea una en{" "}
+                  <strong>DB Admin</strong> primero.
+                </p>
+              ) : (
+                <select
+                  id="widget-conn"
+                  value={connectionId}
+                  onChange={(e) => setConnectionId(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                >
+                  {connections.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} · {c.host}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="widget-sql">
+                Consulta SQL{" "}
+                <span className="font-normal text-muted-foreground">
+                  ({type === "sql-metric" ? "primera celda del resultado" : "muestra todas las filas"})
+                </span>
+              </Label>
+              <Textarea
+                id="widget-sql"
+                value={sql}
+                onChange={(e) => setSql(e.target.value)}
+                placeholder={
+                  type === "sql-metric"
+                    ? "SELECT COUNT(*) FROM public.usuario"
+                    : "SELECT id, email FROM public.usuario ORDER BY id DESC LIMIT 10"
+                }
+                className="min-h-24 font-mono text-[12px]"
+                spellCheck={false}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Solo SELECT — las consultas modificantes se rechazan.
+              </p>
+            </div>
+          </>
+        ) : null}
+
         {error ? <ErrorNote>{error}</ErrorNote> : null}
         <div className="flex gap-2">
-          <Button onClick={add} disabled={saving || !title}>
+          <Button
+            onClick={add}
+            disabled={
+              saving ||
+              !title ||
+              (isSql && (!connectionId || !sql.trim()))
+            }
+          >
             {saving ? <Loader2 className="animate-spin" /> : <Plus />}
             Añadir
           </Button>
@@ -481,7 +593,23 @@ function WidgetRenderer({
           onDelete={onDelete}
         />
       );
-    // sql widgets will be added in Commit B
+    case "sql-metric":
+      return (
+        <SqlMetricWidget
+          widgetId={widget.id}
+          title={widget.title}
+          onDelete={onDelete}
+        />
+      );
+    case "sql-table":
+      return (
+        <SqlTableWidget
+          widgetId={widget.id}
+          title={widget.title}
+          onDelete={onDelete}
+        />
+      );
+    // sql-chart comes in Commit C
     default:
       return (
         <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
