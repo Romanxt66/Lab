@@ -17,6 +17,10 @@ import { SendNotification } from "@/modules/notifications/application/send-notif
 import { TelegramAdapter } from "@/modules/notifications/infrastructure/telegram-adapter";
 import { PrismaNotificationConfigRepo } from "@/modules/notifications/infrastructure/prisma-notification-config-repo";
 import type { NotificationConfigRepoPort } from "@/modules/notifications/application/ports";
+import { DbAdminService } from "@/modules/db-admin/application/db-admin-service";
+import { PrismaDbConnectionRepo } from "@/modules/db-admin/infrastructure/prisma-connection-repo";
+import { PgExecutor } from "@/modules/db-admin/infrastructure/pg-executor";
+import { PgIntrospection } from "@/modules/db-admin/infrastructure/pg-introspection";
 import { parseRecipients } from "@/modules/email/domain/email";
 import { RunScrape } from "@/modules/scraper/application/run-scrape";
 import { FetchWebFetcher } from "@/modules/scraper/infrastructure/fetch-web-fetcher";
@@ -143,6 +147,16 @@ export function getProcessCalendarReminders(): ProcessCalendarReminders {
   return new ProcessCalendarReminders(
     new PrismaCalendarRepo(),
     getSendNotification(),
+  );
+}
+
+// --- DB Admin --------------------------------------------------------------
+
+export function getDbAdminService(): DbAdminService {
+  return new DbAdminService(
+    new PrismaDbConnectionRepo(),
+    new PgExecutor(),
+    new PgIntrospection(),
   );
 }
 

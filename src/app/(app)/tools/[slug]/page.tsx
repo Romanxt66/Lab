@@ -30,10 +30,10 @@ export default async function ToolPage({
     notFound();
   }
 
-  const { Component, name, description } = tool;
+  const { Component, name, description, wide } = tool;
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10">
+    <div className={`mx-auto ${wide ? "max-w-7xl" : "max-w-4xl"} px-6 py-10`}>
       <header className="animate-enter mb-8">
         <h1 className="text-2xl font-semibold tracking-tight">{name}</h1>
         <p className="mt-1.5 text-[15px] text-muted-foreground">{description}</p>

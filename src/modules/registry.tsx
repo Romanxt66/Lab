@@ -14,6 +14,7 @@ import {
   Regex,
   Send,
   Bell,
+  Database,
 } from "lucide-react";
 import { JsonFormatter } from "@/modules/dev-utils/ui/JsonFormatter";
 import { Base64Tool } from "@/modules/dev-utils/ui/Base64Tool";
@@ -26,6 +27,7 @@ import { ScraperTool } from "@/modules/scraper/ui/ScraperTool";
 import { JobScheduler } from "@/modules/scheduler/ui/JobScheduler";
 import { CalendarTool } from "@/modules/calendar/ui/CalendarTool";
 import { NotificationSettings } from "@/modules/notifications/ui/NotificationSettings";
+import { DbAdminTool } from "@/modules/db-admin/ui/DbAdminTool";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -41,7 +43,8 @@ export type ToolCategory =
   | "scraper"
   | "scheduler"
   | "calendar"
-  | "notifications";
+  | "notifications"
+  | "database";
 
 export interface CategoryMeta {
   id: ToolCategory;
@@ -51,6 +54,7 @@ export interface CategoryMeta {
 
 export const CATEGORIES: Record<ToolCategory, CategoryMeta> = {
   "dev-utils": { id: "dev-utils", label: "Utilidades de dev", icon: Wrench },
+  database: { id: "database", label: "Base de datos", icon: Database },
   calendar: { id: "calendar", label: "Calendario", icon: CalendarDays },
   email: { id: "email", label: "Correos", icon: Mail },
   notifications: { id: "notifications", label: "Notificaciones", icon: Bell },
@@ -69,6 +73,8 @@ export interface ToolMeta {
   status: "ready" | "soon";
   /** The tool UI. Omitted for "soon" tools. */
   Component?: ComponentType;
+  /** Widen the tool's page container (useful for DB-admin style layouts). */
+  wide?: boolean;
 }
 
 /**
@@ -175,6 +181,17 @@ export const TOOLS: ToolMeta[] = [
     icon: Send,
     status: "ready",
     Component: NotificationSettings,
+  },
+  {
+    slug: "db-admin",
+    name: "DB Admin",
+    description:
+      "Conecta a bases PostgreSQL, explora tablas y ejecuta consultas SQL.",
+    category: "database",
+    icon: Database,
+    status: "ready",
+    Component: DbAdminTool,
+    wide: true,
   },
 ];
 
