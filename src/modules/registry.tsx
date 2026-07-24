@@ -28,6 +28,8 @@ import { JobScheduler } from "@/modules/scheduler/ui/JobScheduler";
 import { CalendarTool } from "@/modules/calendar/ui/CalendarTool";
 import { NotificationSettings } from "@/modules/notifications/ui/NotificationSettings";
 import { DbAdminTool } from "@/modules/db-admin/ui/DbAdminTool";
+import { DashboardTool } from "@/modules/dashboard/ui/DashboardTool";
+import { LayoutDashboard } from "lucide-react";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -191,6 +193,17 @@ export const TOOLS: ToolMeta[] = [
     icon: Database,
     status: "ready",
     Component: DbAdminTool,
+    wide: true,
+  },
+  {
+    slug: "dashboard",
+    name: "Dashboards",
+    description:
+      "Dashboards personalizables con widgets del Lab y consultas SQL.",
+    category: "database",
+    icon: LayoutDashboard,
+    status: "ready",
+    Component: DashboardTool,
     wide: true,
   },
 ];

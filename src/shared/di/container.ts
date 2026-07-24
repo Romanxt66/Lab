@@ -43,6 +43,20 @@ import { PrismaUserRepo } from "@/modules/users/infrastructure/prisma-user-repo"
 import type { UserRepoPort } from "@/modules/users/application/ports";
 import { LoginUseCase } from "@/modules/auth/application/login";
 import { verifyPassword } from "@/shared/password";
+import { DashboardService } from "@/modules/dashboard/application/dashboard-service";
+import {
+  PrismaDashboardRepo,
+  PrismaWidgetRepo,
+} from "@/modules/dashboard/infrastructure/prisma-dashboard-repo";
+import {
+  UpcomingEventsProvider,
+  RecentJobsProvider,
+  GoogleAccountsProvider,
+  RecentEmailsProvider,
+} from "@/modules/dashboard/application/lab-providers";
+import type { WidgetDataProvider } from "@/modules/dashboard/application/ports";
+import type { WidgetType } from "@/modules/dashboard/domain/widget-types";
+import { db as sharedDb } from "@/shared/db";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -147,6 +161,22 @@ export function getProcessCalendarReminders(): ProcessCalendarReminders {
   return new ProcessCalendarReminders(
     new PrismaCalendarRepo(),
     getSendNotification(),
+  );
+}
+
+// --- Dashboard -------------------------------------------------------------
+
+export function getDashboardService(): DashboardService {
+  const providers: Partial<Record<WidgetType, WidgetDataProvider>> = {
+    "lab-upcoming-events": new UpcomingEventsProvider(new PrismaCalendarRepo()),
+    "lab-recent-jobs": new RecentJobsProvider(new PrismaJobRunRepo()),
+    "lab-google-accounts": new GoogleAccountsProvider(new PrismaGoogleAccountRepo()),
+    "lab-recent-emails": new RecentEmailsProvider(sharedDb),
+  };
+  return new DashboardService(
+    new PrismaDashboardRepo(),
+    new PrismaWidgetRepo(),
+    providers,
   );
 }
 

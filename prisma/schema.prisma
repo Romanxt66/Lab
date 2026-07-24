@@ -122,6 +122,38 @@ model Calendario {
   @@map("calendario")
 }
 
+/// A user-created dashboard: a named tab with a collection of widgets.
+model Dashboard {
+  id        String            @id @default(uuid())
+  name      String
+  order     Int               @default(0)
+  widgets   DashboardWidget[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@map("lab_dashboard")
+}
+
+/// A widget on a dashboard. `type` picks the renderer + data provider;
+/// `config` is a JSON blob whose shape depends on the type (see domain/widget-types).
+model DashboardWidget {
+  id          String    @id @default(uuid())
+  dashboardId String
+  dashboard   Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  type        String
+  title       String
+  config      String    @default("{}")
+  layoutX     Int       @default(0)
+  layoutY     Int       @default(0)
+  layoutW     Int       @default(4)
+  layoutH     Int       @default(3)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([dashboardId])
+  @@map("lab_dashboard_widget")
+}
+
 /// External PostgreSQL databases the DB-admin tool can browse & edit.
 /// `connectionUrl` is stored plain (this is a personal lab; only the admin
 /// can log in) and is never serialised to the client.
