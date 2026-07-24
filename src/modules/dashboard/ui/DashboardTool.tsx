@@ -38,8 +38,20 @@ import {
   GoogleAccountsWidget,
   RecentEmailsWidget,
 } from "./widgets/LabWidgets";
-import { SqlMetricWidget, SqlTableWidget } from "./widgets/SqlWidgets";
+import {
+  SqlMetricWidget,
+  SqlTableWidget,
+  SqlChartWidget,
+} from "./widgets/SqlWidgets";
 import { listConnectionsAction } from "@/modules/db-admin/actions";
+import { updateWidgetAction } from "@/modules/dashboard/actions";
+import GridLayout, {
+  useContainerWidth,
+  type Layout,
+  type LayoutItem,
+} from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 import type { DbConnectionDTO } from "@/modules/db-admin/domain/connection";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -349,6 +361,7 @@ function WidgetPicker({
   const [title, setTitle] = React.useState(WIDGET_LABELS["lab-upcoming-events"]);
   const [connectionId, setConnectionId] = React.useState("");
   const [sql, setSql] = React.useState("");
+  const [chartType, setChartType] = React.useState<"bar" | "line">("bar");
   const [connections, setConnections] = React.useState<DbConnectionDTO[]>([]);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -371,7 +384,11 @@ function WidgetPicker({
     setSaving(true);
     try {
       const config = isSql
-        ? JSON.stringify({ connectionId, sql })
+        ? JSON.stringify({
+            connectionId,
+            sql,
+            ...(type === "sql-chart" ? { chartType } : {}),
+          })
         : "{}";
       const res = await addWidgetAction({
         dashboardId,
@@ -493,6 +510,30 @@ function WidgetPicker({
                 Solo SELECT — las consultas modificantes se rechazan.
               </p>
             </div>
+            {type === "sql-chart" ? (
+              <div className="space-y-1.5">
+                <Label>Tipo de gráfica</Label>
+                <div className="inline-flex rounded-md border border-border p-0.5">
+                  {(["bar", "line"] as const).map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setChartType(c)}
+                      className={cn(
+                        "rounded px-3 py-1 text-xs transition-colors",
+                        chartType === c
+                          ? "bg-accent font-medium text-accent-foreground"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {c === "bar" ? "Barras" : "Líneas"}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  La primera columna es el eje X, la segunda el eje Y.
+                </p>
+              </div>
+            ) : null}
           </>
         ) : null}
 
@@ -527,26 +568,70 @@ function WidgetGrid({
   widgets: WidgetDTO[];
   onDeleted: () => void | Promise<void>;
 }) {
+  // react-grid-layout v2 doesn't ship the WidthProvider HOC — it exposes a
+  // `useContainerWidth` hook that we pass to the grid's `width` prop.
+  const { containerRef, width } = useContainerWidth();
+
+  const layout: LayoutItem[] = widgets.map((w) => ({
+    i: w.id,
+    x: w.layout.x,
+    y: w.layout.y,
+    w: Math.max(2, w.layout.w),
+    h: Math.max(2, w.layout.h),
+    minW: 2,
+    minH: 2,
+  }));
+
+  const onLayoutChange = React.useCallback(
+    (next: Layout) => {
+      // Persist any position/size that actually changed.
+      const byId = new Map(widgets.map((w) => [w.id, w.layout]));
+      for (const item of next) {
+        const prev = byId.get(item.i);
+        if (
+          prev &&
+          (prev.x !== item.x ||
+            prev.y !== item.y ||
+            prev.w !== item.w ||
+            prev.h !== item.h)
+        ) {
+          void updateWidgetAction(item.i, {
+            layout: { x: item.x, y: item.y, w: item.w, h: item.h },
+          });
+        }
+      }
+    },
+    [widgets],
+  );
+
   return (
-    <div className="grid grid-cols-12 gap-3 auto-rows-[minmax(80px,auto)]">
-      {widgets.map((w) => (
-        <div
-          key={w.id}
-          className="min-h-[220px]"
-          style={{
-            gridColumn: `span ${clampSpan(w.layout.w)} / span ${clampSpan(w.layout.w)}`,
-            gridRow: `span ${Math.max(1, w.layout.h)} / span ${Math.max(1, w.layout.h)}`,
+    <div ref={containerRef}>
+      {width > 0 ? (
+        <GridLayout
+          className="lab-grid"
+          layout={layout}
+          width={width}
+          gridConfig={{
+            cols: 12,
+            rowHeight: 60,
+            margin: [12, 12] as const,
+            containerPadding: [0, 0] as const,
           }}
+          dragConfig={{
+            handle: ".widget-drag-handle, header",
+            cancel: "button, input, textarea, select, a",
+          }}
+          onLayoutChange={onLayoutChange}
         >
-          <WidgetRenderer widget={w} onDeleted={onDeleted} />
-        </div>
-      ))}
+          {widgets.map((w) => (
+            <div key={w.id} className="widget-drag-handle">
+              <WidgetRenderer widget={w} onDeleted={onDeleted} />
+            </div>
+          ))}
+        </GridLayout>
+      ) : null}
     </div>
   );
-}
-
-function clampSpan(w: number): number {
-  return Math.min(12, Math.max(3, w));
 }
 
 function WidgetRenderer({
@@ -609,7 +694,14 @@ function WidgetRenderer({
           onDelete={onDelete}
         />
       );
-    // sql-chart comes in Commit C
+    case "sql-chart":
+      return (
+        <SqlChartWidget
+          widgetId={widget.id}
+          title={widget.title}
+          onDelete={onDelete}
+        />
+      );
     default:
       return (
         <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">

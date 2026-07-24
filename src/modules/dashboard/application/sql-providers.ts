@@ -65,6 +65,57 @@ export class SqlMetricProvider extends SqlBackedProvider implements WidgetDataPr
   }
 }
 
+// ---- Chart (bar / line) --------------------------------------------------
+
+export interface ChartData {
+  chartType: "bar" | "line";
+  xColumn: string;
+  yColumn: string;
+  points: Array<{ x: string; y: number }>;
+}
+
+export class SqlChartProvider extends SqlBackedProvider implements WidgetDataProvider {
+  async provide(widget: Widget): Promise<Result<ChartData>> {
+    const config = parseWidgetConfig(widget.config);
+    if (!config.connectionId) return err("El widget no tiene una conexión asignada.");
+    if (!config.sql) return err("El widget no tiene una consulta SQL.");
+    const chartType = config.chartType ?? "bar";
+
+    const r = await this.runReadOnly(config.connectionId, config.sql);
+    if (!r.ok) return err(r.error);
+
+    if (r.result.columns.length < 2) {
+      return err(
+        "La consulta debe devolver al menos 2 columnas (x, y).",
+      );
+    }
+    // Default: first column = x, second column = y. Config can override.
+    const xIndex = config.xColumn
+      ? r.result.columns.indexOf(config.xColumn)
+      : 0;
+    const yIndex = config.yColumn
+      ? r.result.columns.indexOf(config.yColumn)
+      : 1;
+    if (xIndex < 0 || yIndex < 0) {
+      return err("Las columnas X/Y indicadas no existen en el resultado.");
+    }
+
+    const points = r.result.rows
+      .map((row) => ({
+        x: String(row[xIndex] ?? ""),
+        y: Number(row[yIndex]),
+      }))
+      .filter((p) => Number.isFinite(p.y));
+
+    return ok({
+      chartType,
+      xColumn: r.result.columns[xIndex],
+      yColumn: r.result.columns[yIndex],
+      points,
+    });
+  }
+}
+
 // ---- Table ---------------------------------------------------------------
 
 export interface TableData {

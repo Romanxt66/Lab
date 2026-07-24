@@ -1,7 +1,19 @@
 "use client";
 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
 import { WidgetShell, useWidgetData, WidgetBody } from "./WidgetShell";
 import type {
+  ChartData,
   MetricData,
   TableData,
 } from "@/modules/dashboard/application/sql-providers";
@@ -88,6 +100,89 @@ export function SqlTableWidget({
             </table>
           </div>
         )}
+      </WidgetBody>
+    </WidgetShell>
+  );
+}
+
+// ---- Chart --------------------------------------------------------------
+
+export function SqlChartWidget({
+  widgetId,
+  title,
+  onDelete,
+}: {
+  widgetId: string;
+  title: string;
+  onDelete?: () => void | Promise<void>;
+}) {
+  const state = useWidgetData<ChartData>(widgetId);
+  return (
+    <WidgetShell widgetId={widgetId} title={title} onDelete={onDelete}>
+      <WidgetBody state={state} emptyMessage="Sin datos que graficar.">
+        {(data) => {
+          if (data.points.length === 0) {
+            return (
+              <p className="text-xs text-muted-foreground">
+                La consulta no devolvió filas.
+              </p>
+            );
+          }
+          const commonProps = {
+            data: data.points,
+            margin: { top: 10, right: 8, bottom: 4, left: 0 },
+          };
+          const tickStyle = { fontSize: 11 };
+          return (
+            <ResponsiveContainer width="100%" height="100%">
+              {data.chartType === "line" ? (
+                <LineChart {...commonProps}>
+                  <CartesianGrid stroke="currentColor" strokeOpacity={0.08} vertical={false} />
+                  <XAxis dataKey="x" tick={tickStyle} stroke="currentColor" strokeOpacity={0.3} />
+                  <YAxis tick={tickStyle} stroke="currentColor" strokeOpacity={0.3} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 6,
+                      fontSize: 11,
+                    }}
+                    labelStyle={{ fontSize: 11 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="y"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    name={data.yColumn}
+                  />
+                </LineChart>
+              ) : (
+                <BarChart {...commonProps}>
+                  <CartesianGrid stroke="currentColor" strokeOpacity={0.08} vertical={false} />
+                  <XAxis dataKey="x" tick={tickStyle} stroke="currentColor" strokeOpacity={0.3} />
+                  <YAxis tick={tickStyle} stroke="currentColor" strokeOpacity={0.3} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 6,
+                      fontSize: 11,
+                    }}
+                    labelStyle={{ fontSize: 11 }}
+                  />
+                  <Bar
+                    dataKey="y"
+                    fill="currentColor"
+                    fillOpacity={0.7}
+                    name={data.yColumn}
+                  />
+                </BarChart>
+              )}
+            </ResponsiveContainer>
+          );
+        }}
       </WidgetBody>
     </WidgetShell>
   );

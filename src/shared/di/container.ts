@@ -57,6 +57,7 @@ import {
 import {
   SqlMetricProvider,
   SqlTableProvider,
+  SqlChartProvider,
 } from "@/modules/dashboard/application/sql-providers";
 import type { WidgetDataProvider } from "@/modules/dashboard/application/ports";
 import type { WidgetType } from "@/modules/dashboard/domain/widget-types";
@@ -178,6 +179,7 @@ export function getDashboardService(): DashboardService {
     "lab-recent-emails": new RecentEmailsProvider(sharedDb),
     "sql-metric": new SqlMetricProvider(getDbAdminService()),
     "sql-table": new SqlTableProvider(getDbAdminService()),
+    "sql-chart": new SqlChartProvider(getDbAdminService()),
   };
   return new DashboardService(
     new PrismaDashboardRepo(),
