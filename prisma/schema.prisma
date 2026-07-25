@@ -122,6 +122,53 @@ model Calendario {
   @@map("calendario")
 }
 
+/// Finance module — cuenta bancaria / efectivo / tarjeta / etc.
+/// Balances are derived from `initialBalance` + related transactions.
+model FinancialAccount {
+  id             String                 @id @default(uuid())
+  name           String
+  kind           String                 // "cash" | "bank" | "card" | "savings" | "other"
+  currency       String                 @default("USD")
+  initialBalance Decimal                @default(0) @db.Decimal(14, 2)
+  archived       Boolean                @default(false)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  transactions   FinancialTransaction[]
+
+  @@map("lab_financial_account")
+}
+
+/// User-defined category for grouping transactions.
+model TransactionCategory {
+  id           String                 @id @default(uuid())
+  name         String
+  kind         String                 // "income" | "expense"
+  color        String?
+  createdAt    DateTime               @default(now())
+  transactions FinancialTransaction[]
+
+  @@unique([name, kind])
+  @@map("lab_transaction_category")
+}
+
+/// A single income / expense against a financial account.
+model FinancialTransaction {
+  id         String              @id @default(uuid())
+  accountId  String
+  account    FinancialAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  categoryId String?
+  category   TransactionCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  kind       String              // "income" | "expense"
+  amount     Decimal             @db.Decimal(14, 2)
+  occurredAt DateTime
+  notes      String?
+  createdAt  DateTime            @default(now())
+
+  @@index([accountId])
+  @@index([occurredAt])
+  @@map("lab_financial_transaction")
+}
+
 /// External PostgreSQL databases the DB-admin tool can browse & edit.
 /// `connectionUrl` is stored plain (this is a personal lab; only the admin
 /// can log in) and is never serialised to the client.

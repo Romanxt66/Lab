@@ -43,6 +43,10 @@ import { PrismaUserRepo } from "@/modules/users/infrastructure/prisma-user-repo"
 import type { UserRepoPort } from "@/modules/users/application/ports";
 import { LoginUseCase } from "@/modules/auth/application/login";
 import { verifyPassword } from "@/shared/password";
+import { FinanceService } from "@/modules/finance/application/finance-service";
+import { PrismaAccountRepo } from "@/modules/finance/infrastructure/prisma-account-repo";
+import { PrismaCategoryRepo } from "@/modules/finance/infrastructure/prisma-category-repo";
+import { PrismaTransactionRepo } from "@/modules/finance/infrastructure/prisma-transaction-repo";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -147,6 +151,16 @@ export function getProcessCalendarReminders(): ProcessCalendarReminders {
   return new ProcessCalendarReminders(
     new PrismaCalendarRepo(),
     getSendNotification(),
+  );
+}
+
+// --- Finance ---------------------------------------------------------------
+
+export function getFinanceService(): FinanceService {
+  return new FinanceService(
+    new PrismaAccountRepo(),
+    new PrismaCategoryRepo(),
+    new PrismaTransactionRepo(),
   );
 }
 

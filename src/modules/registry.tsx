@@ -15,6 +15,7 @@ import {
   Send,
   Bell,
   Database,
+  Wallet,
 } from "lucide-react";
 import { JsonFormatter } from "@/modules/dev-utils/ui/JsonFormatter";
 import { Base64Tool } from "@/modules/dev-utils/ui/Base64Tool";
@@ -28,6 +29,7 @@ import { JobScheduler } from "@/modules/scheduler/ui/JobScheduler";
 import { CalendarTool } from "@/modules/calendar/ui/CalendarTool";
 import { NotificationSettings } from "@/modules/notifications/ui/NotificationSettings";
 import { DbAdminTool } from "@/modules/db-admin/ui/DbAdminTool";
+import { FinanceTool } from "@/modules/finance/ui/FinanceTool";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -44,7 +46,8 @@ export type ToolCategory =
   | "scheduler"
   | "calendar"
   | "notifications"
-  | "database";
+  | "database"
+  | "finance";
 
 export interface CategoryMeta {
   id: ToolCategory;
@@ -54,6 +57,7 @@ export interface CategoryMeta {
 
 export const CATEGORIES: Record<ToolCategory, CategoryMeta> = {
   "dev-utils": { id: "dev-utils", label: "Utilidades de dev", icon: Wrench },
+  finance: { id: "finance", label: "Finanzas", icon: Wallet },
   database: { id: "database", label: "Base de datos", icon: Database },
   calendar: { id: "calendar", label: "Calendario", icon: CalendarDays },
   email: { id: "email", label: "Correos", icon: Mail },
@@ -191,6 +195,17 @@ export const TOOLS: ToolMeta[] = [
     icon: Database,
     status: "ready",
     Component: DbAdminTool,
+    wide: true,
+  },
+  {
+    slug: "finance",
+    name: "Finanzas",
+    description:
+      "Cuentas, movimientos, categorías y resumen mensual de tu economía.",
+    category: "finance",
+    icon: Wallet,
+    status: "ready",
+    Component: FinanceTool,
     wide: true,
   },
 ];
