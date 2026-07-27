@@ -13,6 +13,11 @@
 :root {
   --radius: 0.75rem;
 
+  /* Tell the browser which theme to render native controls in (the <select>
+   * option popup, scrollbars, form widgets). Without this the native dropdown
+   * ignores our `.dark` class and paints a light popup, hiding the options. */
+  color-scheme: light;
+
   --background: oklch(0.985 0 0);
   --foreground: oklch(0.145 0 0);
 
@@ -62,6 +67,8 @@
 }
 
 .dark {
+  color-scheme: dark;
+
   --background: oklch(0.135 0 0);
   --foreground: oklch(0.97 0 0);
 
@@ -135,6 +142,15 @@
 
 * {
   border-color: var(--border);
+}
+
+/* Native <select> option popups are painted by the browser; pin their colors
+ * to our popover tokens so options stay legible in both themes (belt-and-
+ * suspenders alongside `color-scheme`). */
+select option,
+select optgroup {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
 }
 
 body {
