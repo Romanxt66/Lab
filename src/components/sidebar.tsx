@@ -10,6 +10,7 @@ import { CATEGORIES, TOOLS, type ToolCategory } from "@/modules/registry";
 const CATEGORY_ORDER: ToolCategory[] = [
   "dev-utils",
   "finance",
+  "inventory",
   "database",
   "calendar",
   "email",

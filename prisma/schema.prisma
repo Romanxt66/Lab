@@ -212,6 +212,62 @@ model RecurringPayment {
   @@map("lab_recurring_payment")
 }
 
+/// Inventory module — a physical place that holds items. Self-referential so
+/// places nest (casa → habitación → caja → estante) to any depth.
+model InventoryLocation {
+  id        String              @id @default(uuid())
+  name      String
+  kind      String              @default("place") // "room" | "box" | "shelf" | "place"
+  parentId  String?
+  parent    InventoryLocation?  @relation("LocationTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  InventoryLocation[] @relation("LocationTree")
+  items     InventoryItem[]
+  notes     String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([parentId])
+  @@map("lab_inventory_location")
+}
+
+/// An item the user owns / manages. `quantity` is the current on-hand count,
+/// kept in sync by the movements ledger.
+model InventoryItem {
+  id          String              @id @default(uuid())
+  name        String
+  category    String?
+  quantity    Int                 @default(0)
+  unit        String?             // "u" | "kg" | "l" | …
+  locationId  String?
+  location    InventoryLocation?  @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  notes       String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  movements   InventoryMovement[]
+
+  @@index([locationId])
+  @@map("lab_inventory_item")
+}
+
+/// A single stock movement in the item's history (mini-ERP ledger). `delta`
+/// is the signed change applied to the item's quantity.
+model InventoryMovement {
+  id         String        @id @default(uuid())
+  itemId     String
+  item       InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  kind       String        // "bought" | "sold" | "gave_away" | "received" | "moved" | "adjust"
+  delta      Int
+  /// For "moved": the destination location; null otherwise.
+  toLocationId String?
+  notes      String?
+  occurredAt DateTime      @default(now())
+  createdAt  DateTime      @default(now())
+
+  @@index([itemId])
+  @@index([occurredAt])
+  @@map("lab_inventory_movement")
+}
+
 /// External PostgreSQL databases the DB-admin tool can browse & edit.
 /// `connectionUrl` is stored plain (this is a personal lab; only the admin
 /// can log in) and is never serialised to the client.

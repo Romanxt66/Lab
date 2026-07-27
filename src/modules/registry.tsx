@@ -16,6 +16,7 @@ import {
   Bell,
   Database,
   Wallet,
+  Boxes,
 } from "lucide-react";
 import { JsonFormatter } from "@/modules/dev-utils/ui/JsonFormatter";
 import { Base64Tool } from "@/modules/dev-utils/ui/Base64Tool";
@@ -30,6 +31,7 @@ import { CalendarTool } from "@/modules/calendar/ui/CalendarTool";
 import { NotificationSettings } from "@/modules/notifications/ui/NotificationSettings";
 import { DbAdminTool } from "@/modules/db-admin/ui/DbAdminTool";
 import { FinanceTool } from "@/modules/finance/ui/FinanceTool";
+import { InventoryTool } from "@/modules/inventory/ui/InventoryTool";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -47,7 +49,8 @@ export type ToolCategory =
   | "calendar"
   | "notifications"
   | "database"
-  | "finance";
+  | "finance"
+  | "inventory";
 
 export interface CategoryMeta {
   id: ToolCategory;
@@ -58,6 +61,7 @@ export interface CategoryMeta {
 export const CATEGORIES: Record<ToolCategory, CategoryMeta> = {
   "dev-utils": { id: "dev-utils", label: "Utilidades de dev", icon: Wrench },
   finance: { id: "finance", label: "Finanzas", icon: Wallet },
+  inventory: { id: "inventory", label: "Inventario", icon: Boxes },
   database: { id: "database", label: "Base de datos", icon: Database },
   calendar: { id: "calendar", label: "Calendario", icon: CalendarDays },
   email: { id: "email", label: "Correos", icon: Mail },
@@ -206,6 +210,17 @@ export const TOOLS: ToolMeta[] = [
     icon: Wallet,
     status: "ready",
     Component: FinanceTool,
+    wide: true,
+  },
+  {
+    slug: "inventory",
+    name: "Inventario",
+    description:
+      "Artículos, ubicaciones anidadas y un historial de movimientos tipo mini-ERP.",
+    category: "inventory",
+    icon: Boxes,
+    status: "ready",
+    Component: InventoryTool,
     wide: true,
   },
 ];

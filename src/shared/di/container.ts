@@ -50,6 +50,10 @@ import { PrismaCategoryRepo } from "@/modules/finance/infrastructure/prisma-cate
 import { PrismaTransactionRepo } from "@/modules/finance/infrastructure/prisma-transaction-repo";
 import { PrismaBudgetRepo } from "@/modules/finance/infrastructure/prisma-budget-repo";
 import { PrismaRecurringRepo } from "@/modules/finance/infrastructure/prisma-recurring-repo";
+import { InventoryService } from "@/modules/inventory/application/inventory-service";
+import { PrismaLocationRepo } from "@/modules/inventory/infrastructure/prisma-location-repo";
+import { PrismaItemRepo } from "@/modules/inventory/infrastructure/prisma-item-repo";
+import { PrismaMovementRepo } from "@/modules/inventory/infrastructure/prisma-movement-repo";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -175,6 +179,16 @@ export function getProcessRecurring(): ProcessRecurring {
     new PrismaTransactionRepo(),
     new PrismaAccountRepo(),
     getSendNotification(),
+  );
+}
+
+// --- Inventory -------------------------------------------------------------
+
+export function getInventoryService(): InventoryService {
+  return new InventoryService(
+    new PrismaLocationRepo(),
+    new PrismaItemRepo(),
+    new PrismaMovementRepo(),
   );
 }
 
