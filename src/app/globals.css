@@ -49,11 +49,6 @@
   --glass-border: oklch(0.145 0 0 / 0.08);
   --glow: oklch(0 0 0 / 0.05);
 
-  /* Translucent page wash — a soft frosted tint layered over the base so the
-   * page background itself reads as glass, not a flat fill. */
-  --page-tint-a: oklch(1 0 0 / 0.55);
-  --page-tint-b: oklch(0.985 0 0 / 0.25);
-
   /* Liquid glass (Apple-style frosted buttons) — kept highly translucent */
   --lg-bg: oklch(1 0 0 / 0.22);
   --lg-bg-hover: oklch(1 0 0 / 0.4);
@@ -103,9 +98,6 @@
   --glass-strong: oklch(0.2 0 0 / 0.72);
   --glass-border: oklch(1 0 0 / 0.1);
   --glow: oklch(1 0 0 / 0.06);
-
-  --page-tint-a: oklch(0.24 0 0 / 0.45);
-  --page-tint-b: oklch(0.135 0 0 / 0.2);
 
   --lg-bg: oklch(1 0 0 / 0.05);
   --lg-bg-hover: oklch(1 0 0 / 0.11);
@@ -161,37 +153,57 @@ select optgroup {
   color: var(--popover-foreground);
 }
 
-/* Solid base sits on the root element; the body layers a translucent frosted
- * wash on top so the page background itself reads as glass. */
-html {
-  background: var(--background);
-}
-
 body {
-  /* Translucent tint layered over the (opaque) html base. */
-  background: linear-gradient(
-    160deg,
-    var(--page-tint-a),
-    var(--page-tint-b)
-  );
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
+  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* Subtle grayscale glows so translucent surfaces have something to blur over. */
-body::before {
+/* Ambient backdrop: soft grayscale light-pools that drift very slowly, giving
+ * the translucent glass chrome a living surface to blur over. Two layers move
+ * on different paths/speeds for depth. Monochrome (uses --glow) to preserve the
+ * black-and-white identity; motion is slow and low-contrast, never distracting.
+ * Paused entirely under prefers-reduced-motion (see the guard below). */
+body::before,
+body::after {
   content: "";
   position: fixed;
-  inset: 0;
+  inset: -25%;
   z-index: -1;
   pointer-events: none;
+  will-change: transform;
+}
+body::before {
   background:
-    radial-gradient(1100px 560px at 18% -12%, var(--glow), transparent 60%),
-    radial-gradient(900px 520px at 100% 0%, var(--glow), transparent 55%);
+    radial-gradient(38% 46% at 16% 6%, var(--glow), transparent 62%),
+    radial-gradient(34% 42% at 88% 2%, var(--glow), transparent 60%),
+    radial-gradient(48% 52% at 62% 108%, var(--glow), transparent 66%);
+  animation: aurora-drift 34s var(--ease-in-out) infinite alternate;
+}
+body::after {
+  background:
+    radial-gradient(30% 38% at 78% 34%, var(--glow), transparent 60%),
+    radial-gradient(34% 40% at 22% 80%, var(--glow), transparent 62%);
+  opacity: 0.75;
+  animation: aurora-drift-2 46s var(--ease-in-out) infinite alternate;
+}
+@keyframes aurora-drift {
+  from {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 2.5%, 0) scale(1.08);
+  }
+}
+@keyframes aurora-drift-2 {
+  from {
+    transform: translate3d(2.5%, 3%, 0) scale(1.06);
+  }
+  to {
+    transform: translate3d(-2.5%, -3%, 0) scale(1);
+  }
 }
 
 /* --- Glass surfaces ---------------------------------------------------------
@@ -320,13 +332,32 @@ body::before {
   animation: enter-fade 0.4s var(--ease-out) both;
 }
 
-/* Never fight the user's motion preference. */
+/* Route transition: a quick crossfade + tiny rise applied to the main content
+ * on navigation (keyed by pathname). Deliberately opacity-led so it composes
+ * with any inner stagger instead of fighting it. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.page-enter {
+  animation: page-in 0.3s var(--ease-out-expo) both;
+}
+
+/* Never fight the user's motion preference. Also cap iterations so the
+ * infinite ambient drift settles on its first frame instead of looping fast. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

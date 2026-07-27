@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
+import { PageTransition } from "@/components/page-transition";
 import { getCurrentUser } from "@/modules/auth/current-user";
 
 /** Authenticated app shell. Middleware guards routing; this is defense in depth. */
@@ -19,7 +20,9 @@ export default async function AppLayout({
           <ThemeToggle />
           <UserMenu email={user.email} name={user.name} />
         </header>
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto">
+          <PageTransition>{children}</PageTransition>
+        </main>
       </div>
     </div>
   );

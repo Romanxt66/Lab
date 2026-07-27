@@ -92,7 +92,7 @@ export function Sidebar() {
                         href={href}
                         title={collapsed ? tool.name : undefined}
                         className={cn(
-                          "flex items-center rounded-md text-sm transition-[color,background-color] duration-200 [transition-timing-function:var(--ease-out)]",
+                          "group/nav flex items-center rounded-md text-sm transition-[color,background-color,transform] duration-200 [transition-timing-function:var(--ease-out)] active:scale-[0.98]",
                           collapsed
                             ? "justify-center px-0 py-2"
                             : "gap-2.5 px-2.5 py-1.5",
@@ -101,9 +101,16 @@ export function Sidebar() {
                             : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
                         )}
                       >
-                        <Icon className="size-4 shrink-0" />
+                        <Icon
+                          className={cn(
+                            "size-4 shrink-0 transition-transform duration-200 [transition-timing-function:var(--ease-out)] group-hover/nav:scale-110",
+                            active && "scale-110",
+                          )}
+                        />
                         {!collapsed ? (
-                          <span className="truncate">{tool.name}</span>
+                          <span className="truncate transition-transform duration-200 [transition-timing-function:var(--ease-out)] group-hover/nav:translate-x-0.5">
+                            {tool.name}
+                          </span>
                         ) : null}
                       </Link>
                     </li>
