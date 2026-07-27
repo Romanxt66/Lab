@@ -14,6 +14,8 @@ import {
   monthlySummary,
   netMovements,
 } from "./domain/balance";
+import { budgetProgress, validateBudgetInput } from "./domain/budget";
+import { advance, dueOccurrences, shouldRemind } from "./domain/recurring";
 import type { FinancialAccount } from "./domain/account";
 import type { FinancialTransaction } from "./domain/transaction";
 
@@ -157,5 +159,129 @@ describe("monthlySummary", () => {
     expect(s.income).toBe(500);
     expect(s.expense).toBe(150);
     expect(s.net).toBe(350);
+  });
+});
+
+// ---- Budgets -------------------------------------------------------------
+
+describe("budgetProgress", () => {
+  it("is 'ok' below 80%", () => {
+    const p = budgetProgress("c1", 100, 50);
+    expect(p.status).toBe("ok");
+    expect(p.remaining).toBe(50);
+  });
+  it("is 'warning' at >= 80%", () => {
+    expect(budgetProgress("c1", 100, 80).status).toBe("warning");
+    expect(budgetProgress("c1", 100, 95).status).toBe("warning");
+  });
+  it("is 'over' at >= 100% and reports negative remaining", () => {
+    const p = budgetProgress("c1", 100, 130);
+    expect(p.status).toBe("over");
+    expect(p.remaining).toBe(-30);
+  });
+});
+
+describe("validateBudgetInput", () => {
+  it("rejects amount <= 0", () => {
+    expect(validateBudgetInput({ categoryId: "c1", amount: 0 }).ok).toBe(false);
+  });
+  it("rejects missing category", () => {
+    expect(validateBudgetInput({ categoryId: "", amount: 10 }).ok).toBe(false);
+  });
+});
+
+// ---- Recurring -----------------------------------------------------------
+
+describe("advance", () => {
+  it("moves weekly by 7 days", () => {
+    expect(advance(new Date("2026-01-01T12:00:00"), "weekly")).toEqual(
+      new Date("2026-01-08T12:00:00"),
+    );
+  });
+  it("moves monthly by one calendar month", () => {
+    expect(advance(new Date("2026-01-15T12:00:00"), "monthly")).toEqual(
+      new Date("2026-02-15T12:00:00"),
+    );
+  });
+  it("moves yearly by one year", () => {
+    expect(advance(new Date("2026-03-10T12:00:00"), "yearly")).toEqual(
+      new Date("2027-03-10T12:00:00"),
+    );
+  });
+});
+
+describe("dueOccurrences", () => {
+  it("returns nothing when nextRunAt is in the future", () => {
+    const { occurrences, newNextRunAt } = dueOccurrences(
+      new Date("2026-06-01T12:00:00"),
+      "monthly",
+      new Date("2026-05-15T12:00:00"),
+    );
+    expect(occurrences).toHaveLength(0);
+    expect(newNextRunAt).toEqual(new Date("2026-06-01T12:00:00"));
+  });
+  it("backfills every missed occurrence up to now", () => {
+    const { occurrences, newNextRunAt } = dueOccurrences(
+      new Date("2026-01-01T12:00:00"),
+      "monthly",
+      new Date("2026-03-15T12:00:00"),
+    );
+    // Jan, Feb, Mar are due; next becomes April.
+    expect(occurrences).toHaveLength(3);
+    expect(newNextRunAt).toEqual(new Date("2026-04-01T12:00:00"));
+  });
+  it("caps catch-up to maxCatchUp", () => {
+    const { occurrences } = dueOccurrences(
+      new Date("2000-01-01T12:00:00"),
+      "monthly",
+      new Date("2026-01-01T12:00:00"),
+      12,
+    );
+    expect(occurrences).toHaveLength(12);
+  });
+});
+
+describe("shouldRemind", () => {
+  const basePayment = {
+    id: "r1",
+    name: "Alquiler",
+    accountId: "a1",
+    categoryId: null,
+    kind: "expense" as const,
+    amount: 500,
+    frequency: "monthly" as const,
+    nextRunAt: new Date("2026-02-10T12:00:00"),
+    remindDaysBefore: 3,
+    reminderSentAt: null,
+    active: true,
+    notes: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  it("reminds inside the window", () => {
+    expect(shouldRemind(basePayment, new Date("2026-02-08T12:00:00"))).toBe(
+      true,
+    );
+  });
+  it("does not remind before the window", () => {
+    expect(shouldRemind(basePayment, new Date("2026-02-05T12:00:00"))).toBe(
+      false,
+    );
+  });
+  it("does not remind once already sent", () => {
+    expect(
+      shouldRemind(
+        { ...basePayment, reminderSentAt: new Date("2026-02-08T12:00:00") },
+        new Date("2026-02-09T12:00:00"),
+      ),
+    ).toBe(false);
+  });
+  it("does not remind when disabled or paused", () => {
+    expect(
+      shouldRemind({ ...basePayment, remindDaysBefore: null }, new Date("2026-02-08T12:00:00")),
+    ).toBe(false);
+    expect(
+      shouldRemind({ ...basePayment, active: false }, new Date("2026-02-08T12:00:00")),
+    ).toBe(false);
   });
 });

@@ -125,27 +125,30 @@ model Calendario {
 /// Finance module — cuenta bancaria / efectivo / tarjeta / etc.
 /// Balances are derived from `initialBalance` + related transactions.
 model FinancialAccount {
-  id             String                 @id @default(uuid())
-  name           String
-  kind           String                 // "cash" | "bank" | "card" | "savings" | "other"
-  currency       String                 @default("USD")
-  initialBalance Decimal                @default(0) @db.Decimal(14, 2)
-  archived       Boolean                @default(false)
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
-  transactions   FinancialTransaction[]
+  id                 String                 @id @default(uuid())
+  name               String
+  kind               String                 // "cash" | "bank" | "card" | "savings" | "other"
+  currency           String                 @default("USD")
+  initialBalance     Decimal                @default(0) @db.Decimal(14, 2)
+  archived           Boolean                @default(false)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  transactions       FinancialTransaction[]
+  recurringPayments  RecurringPayment[]
 
   @@map("lab_financial_account")
 }
 
 /// User-defined category for grouping transactions.
 model TransactionCategory {
-  id           String                 @id @default(uuid())
-  name         String
-  kind         String                 // "income" | "expense"
-  color        String?
-  createdAt    DateTime               @default(now())
-  transactions FinancialTransaction[]
+  id                String                 @id @default(uuid())
+  name              String
+  kind              String                 // "income" | "expense"
+  color             String?
+  createdAt         DateTime               @default(now())
+  transactions      FinancialTransaction[]
+  budgets           Budget[]
+  recurringPayments RecurringPayment[]
 
   @@unique([name, kind])
   @@map("lab_transaction_category")
@@ -167,6 +170,46 @@ model FinancialTransaction {
   @@index([accountId])
   @@index([occurredAt])
   @@map("lab_financial_transaction")
+}
+
+/// Monthly spending limit for an expense category. One budget per category.
+model Budget {
+  id         String              @id @default(uuid())
+  categoryId String              @unique
+  category   TransactionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  amount     Decimal             @db.Decimal(14, 2)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@map("lab_budget")
+}
+
+/// A recurring payment (rent, subscription…) that auto-creates a transaction
+/// on each due date and optionally fires a Telegram reminder beforehand.
+model RecurringPayment {
+  id            String               @id @default(uuid())
+  name          String
+  accountId     String
+  account       FinancialAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  categoryId    String?
+  category      TransactionCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  kind          String               // "income" | "expense"
+  amount        Decimal              @db.Decimal(14, 2)
+  /// Cadence: "monthly" | "weekly" | "yearly".
+  frequency     String               @default("monthly")
+  /// The next date this payment is due (also the anchor for the cadence).
+  nextRunAt     DateTime
+  /// Days before `nextRunAt` to send a Telegram reminder. null = no reminder.
+  remindDaysBefore Int?
+  /// Set once the reminder for the current `nextRunAt` has been sent.
+  reminderSentAt DateTime?
+  active        Boolean              @default(true)
+  notes         String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([nextRunAt])
+  @@map("lab_recurring_payment")
 }
 
 /// External PostgreSQL databases the DB-admin tool can browse & edit.

@@ -44,9 +44,12 @@ import type { UserRepoPort } from "@/modules/users/application/ports";
 import { LoginUseCase } from "@/modules/auth/application/login";
 import { verifyPassword } from "@/shared/password";
 import { FinanceService } from "@/modules/finance/application/finance-service";
+import { ProcessRecurring } from "@/modules/finance/application/process-recurring";
 import { PrismaAccountRepo } from "@/modules/finance/infrastructure/prisma-account-repo";
 import { PrismaCategoryRepo } from "@/modules/finance/infrastructure/prisma-category-repo";
 import { PrismaTransactionRepo } from "@/modules/finance/infrastructure/prisma-transaction-repo";
+import { PrismaBudgetRepo } from "@/modules/finance/infrastructure/prisma-budget-repo";
+import { PrismaRecurringRepo } from "@/modules/finance/infrastructure/prisma-recurring-repo";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -161,6 +164,17 @@ export function getFinanceService(): FinanceService {
     new PrismaAccountRepo(),
     new PrismaCategoryRepo(),
     new PrismaTransactionRepo(),
+    new PrismaBudgetRepo(),
+    new PrismaRecurringRepo(),
+  );
+}
+
+export function getProcessRecurring(): ProcessRecurring {
+  return new ProcessRecurring(
+    new PrismaRecurringRepo(),
+    new PrismaTransactionRepo(),
+    new PrismaAccountRepo(),
+    getSendNotification(),
   );
 }
 

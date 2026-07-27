@@ -5,6 +5,8 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AccountsPanel } from "./AccountsPanel";
 import { TransactionsPanel } from "./TransactionsPanel";
+import { BudgetsPanel } from "./BudgetsPanel";
+import { RecurringPanel } from "./RecurringPanel";
 import { SummaryPanel } from "./SummaryPanel";
 import {
   listAccountsWithBalancesAction,
@@ -13,7 +15,12 @@ import {
 } from "@/modules/finance/actions";
 import type { CategoryDTO } from "@/modules/finance/domain/category";
 
-type Tab = "accounts" | "transactions" | "summary";
+type Tab =
+  | "accounts"
+  | "transactions"
+  | "budgets"
+  | "recurring"
+  | "summary";
 
 /**
  * Root of the finance tool. Owns the shared caches (accounts + categories)
@@ -56,6 +63,8 @@ export function FinanceTool() {
           [
             { id: "accounts", label: "Cuentas" },
             { id: "transactions", label: "Movimientos" },
+            { id: "budgets", label: "Presupuestos" },
+            { id: "recurring", label: "Recurrentes" },
             { id: "summary", label: "Resumen" },
           ] as const
         ).map((t) => (
@@ -88,6 +97,18 @@ export function FinanceTool() {
           accounts={accounts}
           categories={categories}
           onCategoriesChanged={refreshCategories}
+          onTransactionsChanged={refreshAccounts}
+        />
+      ) : null}
+
+      {tab === "budgets" ? (
+        <BudgetsPanel accounts={accounts} categories={categories} />
+      ) : null}
+
+      {tab === "recurring" ? (
+        <RecurringPanel
+          accounts={accounts}
+          categories={categories}
           onTransactionsChanged={refreshAccounts}
         />
       ) : null}

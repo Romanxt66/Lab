@@ -17,12 +17,27 @@ import {
 import {
   accountBalance,
   monthlySummary,
+  groupByCategory,
   type MonthlySummary,
 } from "@/modules/finance/domain/balance";
+import {
+  validateBudgetInput,
+  budgetProgress,
+  type Budget,
+  type BudgetInput,
+  type BudgetProgress,
+} from "@/modules/finance/domain/budget";
+import {
+  validateRecurringInput,
+  type RecurringPayment,
+  type RecurringPaymentInput,
+} from "@/modules/finance/domain/recurring";
 import type {
   AccountRepoPort,
   CategoryRepoPort,
   TransactionRepoPort,
+  BudgetRepoPort,
+  RecurringRepoPort,
 } from "./ports";
 
 export interface AccountWithBalance {
@@ -34,11 +49,18 @@ export interface AccountWithBalance {
  * Orchestrates the finance domain over three repos. All write operations run
  * validation first and never touch the DB when input is invalid.
  */
+export interface BudgetWithProgress {
+  budget: Budget;
+  progress: BudgetProgress;
+}
+
 export class FinanceService {
   constructor(
     private readonly accounts: AccountRepoPort,
     private readonly categories: CategoryRepoPort,
     private readonly transactions: TransactionRepoPort,
+    private readonly budgets: BudgetRepoPort,
+    private readonly recurring: RecurringRepoPort,
   ) {}
 
   // -- Accounts -----------------------------------------------------------
@@ -133,5 +155,73 @@ export class FinanceService {
     const to = new Date(year, month1to12, 1);
     const tx = await this.transactions.list({ from, to });
     return monthlySummary(tx);
+  }
+
+  // -- Budgets ------------------------------------------------------------
+
+  listBudgets(): Promise<Budget[]> {
+    return this.budgets.list();
+  }
+
+  async saveBudget(input: BudgetInput): Promise<Result<Budget>> {
+    const valid = validateBudgetInput(input);
+    if (!valid.ok) return valid;
+    return ok(await this.budgets.upsert(valid.value));
+  }
+
+  async removeBudget(categoryId: string): Promise<void> {
+    await this.budgets.remove(categoryId);
+  }
+
+  /**
+   * Budgets paired with this month's spend for each category. `spent` is the
+   * absolute value of expense movements for the category in the given month.
+   */
+  async budgetsWithProgress(
+    year: number,
+    month1to12: number,
+  ): Promise<BudgetWithProgress[]> {
+    const [budgets, tx] = await Promise.all([
+      this.budgets.list(),
+      this.transactions.list({
+        from: new Date(year, month1to12 - 1, 1),
+        to: new Date(year, month1to12, 1),
+      }),
+    ]);
+    const byCategory = new Map<string, number>();
+    for (const row of groupByCategory(tx)) {
+      if (row.categoryId) byCategory.set(row.categoryId, row.amount);
+    }
+    return budgets.map((budget) => {
+      // groupByCategory returns signed amounts; expenses are negative.
+      const signed = byCategory.get(budget.categoryId) ?? 0;
+      const spent = signed < 0 ? -signed : 0;
+      return {
+        budget,
+        progress: budgetProgress(budget.categoryId, budget.amount, spent),
+      };
+    });
+  }
+
+  // -- Recurring payments -------------------------------------------------
+
+  listRecurring(activeOnly = false): Promise<RecurringPayment[]> {
+    return this.recurring.list(activeOnly);
+  }
+
+  async saveRecurring(
+    input: RecurringPaymentInput & { id?: string },
+  ): Promise<Result<RecurringPayment>> {
+    const valid = validateRecurringInput(input);
+    if (!valid.ok) return valid;
+    return ok(
+      input.id
+        ? await this.recurring.update(input.id, valid.value)
+        : await this.recurring.create(valid.value),
+    );
+  }
+
+  async removeRecurring(id: string): Promise<void> {
+    await this.recurring.remove(id);
   }
 }

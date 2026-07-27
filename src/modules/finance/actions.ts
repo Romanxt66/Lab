@@ -18,6 +18,16 @@ import {
   type TransactionKind,
 } from "@/modules/finance/domain/transaction";
 import type { MonthlySummary } from "@/modules/finance/domain/balance";
+import {
+  toBudgetDTO,
+  type BudgetDTO,
+  type BudgetProgress,
+} from "@/modules/finance/domain/budget";
+import {
+  toRecurringDTO,
+  type RecurringPaymentDTO,
+  type Frequency,
+} from "@/modules/finance/domain/recurring";
 
 // --- Accounts --------------------------------------------------------------
 
@@ -127,4 +137,79 @@ export async function monthlySummaryAction(
   month1to12: number,
 ): Promise<MonthlySummary> {
   return getFinanceService().monthlySummary(year, month1to12);
+}
+
+// --- Budgets ---------------------------------------------------------------
+
+export interface BudgetWithProgressDTO {
+  budget: BudgetDTO;
+  progress: BudgetProgress;
+}
+
+export async function listBudgetsAction(): Promise<BudgetDTO[]> {
+  const rows = await getFinanceService().listBudgets();
+  return rows.map(toBudgetDTO);
+}
+
+export async function budgetsWithProgressAction(
+  year: number,
+  month1to12: number,
+): Promise<BudgetWithProgressDTO[]> {
+  const rows = await getFinanceService().budgetsWithProgress(year, month1to12);
+  return rows.map((r) => ({ budget: toBudgetDTO(r.budget), progress: r.progress }));
+}
+
+export async function saveBudgetAction(input: {
+  categoryId: string;
+  amount: number;
+}): Promise<Result<BudgetDTO>> {
+  const res = await getFinanceService().saveBudget(input);
+  return res.ok ? ok(toBudgetDTO(res.value)) : res;
+}
+
+export async function deleteBudgetAction(categoryId: string): Promise<void> {
+  await getFinanceService().removeBudget(categoryId);
+}
+
+// --- Recurring payments ----------------------------------------------------
+
+export async function listRecurringAction(
+  activeOnly = false,
+): Promise<RecurringPaymentDTO[]> {
+  const rows = await getFinanceService().listRecurring(activeOnly);
+  return rows.map(toRecurringDTO);
+}
+
+export async function saveRecurringAction(input: {
+  id?: string;
+  name: string;
+  accountId: string;
+  categoryId: string | null;
+  kind: "income" | "expense";
+  amount: number;
+  frequency: Frequency;
+  /** ISO string from the client. */
+  nextRunAt: string;
+  remindDaysBefore: number | null;
+  active: boolean;
+  notes: string | null;
+}): Promise<Result<RecurringPaymentDTO>> {
+  const res = await getFinanceService().saveRecurring({
+    id: input.id,
+    name: input.name,
+    accountId: input.accountId,
+    categoryId: input.categoryId,
+    kind: input.kind,
+    amount: input.amount,
+    frequency: input.frequency,
+    nextRunAt: new Date(input.nextRunAt),
+    remindDaysBefore: input.remindDaysBefore,
+    active: input.active,
+    notes: input.notes,
+  });
+  return res.ok ? ok(toRecurringDTO(res.value)) : res;
+}
+
+export async function deleteRecurringAction(id: string): Promise<void> {
+  await getFinanceService().removeRecurring(id);
 }

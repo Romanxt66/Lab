@@ -4,6 +4,7 @@ import {
   getJobRepo,
   getRunJob,
   getProcessCalendarReminders,
+  getProcessRecurring,
 } from "@/shared/di/container";
 
 /**
@@ -48,7 +49,26 @@ export function startSystemCronTasks(): void {
       console.error("[reminders] error:", e);
     }
   });
-  globalForCron.__systemTasks = [reminderTask];
+
+  // Recurring payments are day-granular, so an hourly tick is plenty. It both
+  // back-fills due transactions and fires "payment coming up" reminders.
+  const recurringTask = cron.schedule("0 * * * *", async () => {
+    try {
+      const summary = await getProcessRecurring().execute();
+      if (summary.created > 0 || summary.reminded > 0 || summary.errors.length) {
+        console.log(
+          `[recurring] creados=${summary.created} recordados=${summary.reminded}` +
+            (summary.errors.length
+              ? ` errores=${summary.errors.slice(0, 3).join(" | ")}`
+              : ""),
+        );
+      }
+    } catch (e) {
+      console.error("[recurring] error:", e);
+    }
+  });
+
+  globalForCron.__systemTasks = [reminderTask, recurringTask];
 }
 
 /** Rebuild all node-cron tasks from the current set of enabled jobs. */

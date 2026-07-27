@@ -2,6 +2,15 @@
 
 import * as React from "react";
 import { ChevronLeft, ChevronRight, Loader2, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Button } from "@/components/ui/button";
 import {
   monthlySummaryAction,
@@ -65,8 +74,6 @@ export function SummaryPanel({
           "Sin categoría",
       }))
       .sort((a, b) => b.amount - a.amount) ?? [];
-
-  const maxExpense = Math.max(1, ...expenseBreakdown.map((r) => r.amount));
 
   return (
     <div className="space-y-4">
@@ -152,30 +159,83 @@ export function SummaryPanel({
                 Sin gastos este mes.
               </p>
             ) : (
-              <ul className="space-y-2">
-                {expenseBreakdown.map((row) => (
-                  <li key={row.categoryId ?? "none"} className="space-y-1">
-                    <div className="flex items-baseline justify-between text-sm">
-                      <span className="truncate">{row.name}</span>
-                      <span className="tabular-nums text-muted-foreground">
+              <>
+                <div className="h-56 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={expenseBreakdown}
+                      layout="vertical"
+                      margin={{ top: 4, right: 12, bottom: 4, left: 8 }}
+                    >
+                      <XAxis type="number" hide />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        width={96}
+                        tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "var(--foreground)", opacity: 0.05 }}
+                        content={<ExpenseTooltip currency={currency} />}
+                      />
+                      <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={18}>
+                        {expenseBreakdown.map((row) => (
+                          <Cell
+                            key={row.categoryId ?? "none"}
+                            fill="var(--foreground)"
+                            fillOpacity={0.55}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <ul className="mt-2 space-y-1">
+                  {expenseBreakdown.map((row) => (
+                    <li
+                      key={row.categoryId ?? "none"}
+                      className="flex items-baseline justify-between text-sm"
+                    >
+                      <span className="truncate text-muted-foreground">
+                        {row.name}
+                      </span>
+                      <span className="tabular-nums">
                         {formatMoney(row.amount, currency)}
                       </span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10">
-                      <div
-                        className="h-full bg-foreground/60"
-                        style={{
-                          width: `${(row.amount / maxExpense) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+interface TooltipEntry {
+  payload: { name: string; amount: number };
+}
+function ExpenseTooltip({
+  active,
+  payload,
+  currency,
+}: {
+  active?: boolean;
+  payload?: TooltipEntry[];
+  currency: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0].payload;
+  return (
+    <div className="glass rounded-md border border-border/60 px-2.5 py-1.5 text-xs shadow-md">
+      <p className="font-medium">{row.name}</p>
+      <p className="tabular-nums text-muted-foreground">
+        {formatMoney(row.amount, currency)}
+      </p>
     </div>
   );
 }

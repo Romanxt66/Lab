@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { env } from "@/shared/env";
-import { getRunDueJobs } from "@/shared/di/container";
+import {
+  getRunDueJobs,
+  getProcessCalendarReminders,
+  getProcessRecurring,
+} from "@/shared/di/container";
 
 /**
  * HTTP cron trigger for cloud deployments (e.g. Vercel Cron calls this every
@@ -22,6 +26,16 @@ export async function GET(req: Request) {
     );
   }
 
-  const result = await getRunDueJobs().execute();
-  return NextResponse.json({ ok: true, ...result, at: new Date().toISOString() });
+  const [jobs, reminders, recurring] = await Promise.all([
+    getRunDueJobs().execute(),
+    getProcessCalendarReminders().execute(),
+    getProcessRecurring().execute(),
+  ]);
+  return NextResponse.json({
+    ok: true,
+    jobs,
+    reminders,
+    recurring,
+    at: new Date().toISOString(),
+  });
 }
