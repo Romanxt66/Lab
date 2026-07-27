@@ -2,7 +2,20 @@
 //  - Requires DATABASE_URL to target a DEDICATED schema (?schema=<name>, not
 //    "public"), so Prisma can never manage/drop another project's tables.
 //  - Creates that schema if it doesn't exist yet.
+//  - Drops tables from removed features (see RETIRED_TABLES). `prisma db push`
+//    (run without --accept-data-loss, on purpose) refuses to drop a non-empty
+//    table, which would otherwise wedge the deploy forever. We drop these few
+//    explicitly named, deliberately-removed tables ourselves — a targeted,
+//    auditable list scoped to our own schema, never a blanket data-loss flag.
 import pg from "pg";
+
+// Tables that belonged to features we deleted. Each entry must correspond to a
+// model that no longer exists in schema.prisma. IF EXISTS keeps this idempotent
+// once the drop has already happened.
+const RETIRED_TABLES = [
+  "lab_dashboard_widget", // FK → lab_dashboard, so drop this first
+  "lab_dashboard",
+];
 
 // Strip accidental surrounding quotes/whitespace (common when pasting into a
 // hosting panel), then parse.
@@ -33,6 +46,15 @@ try {
   await client.connect();
   await client.query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
   console.log(`[schema] esquema "${schema}" listo.`);
+
+  // Drop retired tables so `prisma db push` has nothing destructive to do.
+  // Scoped to our dedicated schema; CASCADE clears dependent FKs/views.
+  for (const table of RETIRED_TABLES) {
+    await client.query(`DROP TABLE IF EXISTS "${schema}"."${table}" CASCADE`);
+  }
+  console.log(
+    `[schema] tablas retiradas verificadas (${RETIRED_TABLES.join(", ")}).`,
+  );
 } catch (e) {
   console.error("[schema] no se pudo preparar el esquema:", e.message);
   process.exit(1);
