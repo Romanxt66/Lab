@@ -271,7 +271,7 @@ export function NotificationSettings() {
               BotFather te dará un{" "}
               <strong className="text-foreground">token</strong> (algo como{" "}
               <code className="font-mono">123456:AA…</code>). Cópialo en el
-              campo "Bot token" de arriba.
+              campo &quot;Bot token&quot; de arriba.
             </li>
             <li>
               <span className="mr-1.5 rounded bg-foreground/10 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
