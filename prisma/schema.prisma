@@ -282,6 +282,23 @@ model DbConnection {
   @@map("lab_db_connection")
 }
 
+/// GitHub connection for the repos-overview tool. Stores the account username
+/// and an optional personal access token (PAT) so private repos and a higher
+/// rate limit are available. Token is stored plain (personal lab; only the
+/// admin can log in) and is NEVER serialised to the client. Only one active
+/// row at a time is expected.
+model GitHubConfig {
+  id        String   @id @default(uuid())
+  username  String
+  /// Personal access token. Optional: without it only public repos are shown.
+  token     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("lab_github_config")
+}
+
 /// Notification channel config. Only one active row at a time is expected;
 /// the calendar reminder job sends to whichever row has `active = true`.
 /// `provider` decides how `recipient` and `credential` are interpreted:

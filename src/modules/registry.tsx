@@ -17,6 +17,7 @@ import {
   Database,
   Wallet,
   Boxes,
+  FolderGit2,
 } from "lucide-react";
 import { JsonFormatter } from "@/modules/dev-utils/ui/JsonFormatter";
 import { Base64Tool } from "@/modules/dev-utils/ui/Base64Tool";
@@ -32,6 +33,7 @@ import { NotificationSettings } from "@/modules/notifications/ui/NotificationSet
 import { DbAdminTool } from "@/modules/db-admin/ui/DbAdminTool";
 import { FinanceTool } from "@/modules/finance/ui/FinanceTool";
 import { InventoryTool } from "@/modules/inventory/ui/InventoryTool";
+import { GitHubTool } from "@/modules/github/ui/GitHubTool";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -50,7 +52,8 @@ export type ToolCategory =
   | "notifications"
   | "database"
   | "finance"
-  | "inventory";
+  | "inventory"
+  | "github";
 
 export interface CategoryMeta {
   id: ToolCategory;
@@ -62,6 +65,7 @@ export const CATEGORIES: Record<ToolCategory, CategoryMeta> = {
   "dev-utils": { id: "dev-utils", label: "Utilidades de dev", icon: Wrench },
   finance: { id: "finance", label: "Finanzas", icon: Wallet },
   inventory: { id: "inventory", label: "Inventario", icon: Boxes },
+  github: { id: "github", label: "GitHub", icon: FolderGit2 },
   database: { id: "database", label: "Base de datos", icon: Database },
   calendar: { id: "calendar", label: "Calendario", icon: CalendarDays },
   email: { id: "email", label: "Correos", icon: Mail },
@@ -221,6 +225,17 @@ export const TOOLS: ToolMeta[] = [
     icon: Boxes,
     status: "ready",
     Component: InventoryTool,
+    wide: true,
+  },
+  {
+    slug: "github",
+    name: "GitHub",
+    description:
+      "Vista previa de tus repositorios y proyectos en curso desde GitHub.",
+    category: "github",
+    icon: FolderGit2,
+    status: "ready",
+    Component: GitHubTool,
     wide: true,
   },
 ];

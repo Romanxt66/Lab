@@ -54,6 +54,9 @@ import { InventoryService } from "@/modules/inventory/application/inventory-serv
 import { PrismaLocationRepo } from "@/modules/inventory/infrastructure/prisma-location-repo";
 import { PrismaItemRepo } from "@/modules/inventory/infrastructure/prisma-item-repo";
 import { PrismaMovementRepo } from "@/modules/inventory/infrastructure/prisma-movement-repo";
+import { GitHubService } from "@/modules/github/application/github-service";
+import { PrismaGitHubConfigRepo } from "@/modules/github/infrastructure/prisma-github-config-repo";
+import { GitHubRestAdapter } from "@/modules/github/infrastructure/github-rest-adapter";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -190,6 +193,12 @@ export function getInventoryService(): InventoryService {
     new PrismaItemRepo(),
     new PrismaMovementRepo(),
   );
+}
+
+// --- GitHub ----------------------------------------------------------------
+
+export function getGitHubService(): GitHubService {
+  return new GitHubService(new PrismaGitHubConfigRepo(), new GitHubRestAdapter());
 }
 
 // --- DB Admin --------------------------------------------------------------
