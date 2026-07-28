@@ -38,7 +38,9 @@ export function GoogleAccountsPanel({ selectedId, onSelect }: Props) {
   }, [selectedId, onSelect, emailFlag]);
 
   React.useEffect(() => {
-    void refresh();
+    void (async () => {
+      await refresh();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

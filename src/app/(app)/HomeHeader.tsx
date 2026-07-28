@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useHydrated } from "@/lib/use-hydrated";
 
 /**
  * Client-side greeting: relies on "now" which the server can't safely render
@@ -8,11 +9,7 @@ import * as React from "react";
  * paint a static skeleton on first render and swap in the greeting on mount.
  */
 export function HomeHeader({ name }: { name: string | null }) {
-  const [now, setNow] = React.useState<Date | null>(null);
-
-  React.useEffect(() => {
-    setNow(new Date());
-  }, []);
+  const now = useHydrated() ? new Date() : null;
 
   const greeting = now ? personalGreeting(now, name) : "Bienvenido";
   const date = now ? formatDate(now) : " "; // non-breaking space keeps layout

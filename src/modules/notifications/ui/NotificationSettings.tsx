@@ -45,7 +45,9 @@ export function NotificationSettings() {
   }, []);
 
   React.useEffect(() => {
-    void refresh();
+    void (async () => {
+      await refresh();
+    })();
   }, [refresh]);
 
   async function save() {

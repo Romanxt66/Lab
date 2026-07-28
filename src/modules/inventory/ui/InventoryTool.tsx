@@ -32,9 +32,13 @@ export function InventoryTool() {
   }, []);
 
   React.useEffect(() => {
-    void Promise.all([refreshLocations(), refreshCategories()]).finally(() =>
-      setLoading(false),
-    );
+    void (async () => {
+      try {
+        await Promise.all([refreshLocations(), refreshCategories()]);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [refreshLocations, refreshCategories]);
 
   if (loading) {

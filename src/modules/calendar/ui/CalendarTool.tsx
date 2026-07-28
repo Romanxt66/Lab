@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorNote } from "@/modules/dev-utils/ui/shared";
 import { cn } from "@/lib/utils";
+import { useHydrated } from "@/lib/use-hydrated";
 import {
   listMonthAction,
   saveEventAction,
@@ -48,8 +49,7 @@ function addDays(d: Date, n: number) {
 export function CalendarTool() {
   // Render only after mount: the calendar renders locale/timezone-dependent
   // dates, which would otherwise mismatch between server and client.
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  const mounted = useHydrated();
   if (!mounted) {
     return (
       <div className="h-[520px] animate-pulse rounded-lg border border-border/60 bg-foreground/[0.03]" />
@@ -80,7 +80,9 @@ function CalendarInner() {
   }, [year, month0]);
 
   React.useEffect(() => {
-    refresh();
+    void (async () => {
+      await refresh();
+    })();
   }, [refresh]);
 
   // 6-week grid starting on the Monday on/before the 1st.

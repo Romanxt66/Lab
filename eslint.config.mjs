@@ -12,15 +12,21 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored skill tooling (incl. a minified UMD bundle) — not app source.
+    ".claude/**",
   ]),
   {
     rules: {
-      // The lab deliberately uses effects to load data and to restore
-      // browser-only state (localStorage / DOM classes) after mount, guarding
-      // against hydration mismatches. React's newer `set-state-in-effect` rule
-      // flags this correct, intentional pattern as an error. Keep it as a
-      // warning so genuinely new cases still surface without failing lint.
-      "react-hooks/set-state-in-effect": "warn",
+      // Allow intentionally-unused identifiers when prefixed with `_`
+      // (e.g. required-by-signature parameters that a stub ignores).
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
 ]);

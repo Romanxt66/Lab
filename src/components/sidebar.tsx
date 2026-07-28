@@ -21,22 +21,36 @@ const CATEGORY_ORDER: ToolCategory[] = [
 ];
 
 const STORAGE_KEY = "sidebar-collapsed";
+const SIDEBAR_EVENT = "lab:sidebarchange";
+
+function subscribeCollapsed(cb: () => void) {
+  window.addEventListener(SIDEBAR_EVENT, cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    window.removeEventListener(SIDEBAR_EVENT, cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+
+function readCollapsed() {
+  return localStorage.getItem(STORAGE_KEY) === "1";
+}
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = React.useState(false);
-
-  // Restore the saved state after mount (avoids hydration mismatch).
-  React.useEffect(() => {
-    setCollapsed(localStorage.getItem(STORAGE_KEY) === "1");
-  }, []);
+  // The collapsed flag lives in localStorage (an external store): read it
+  // reactively so a toggle re-renders without a setState-in-effect, and it
+  // stays in sync across tabs. Defaults to expanded during SSR/first paint.
+  const collapsed = React.useSyncExternalStore(
+    subscribeCollapsed,
+    readCollapsed,
+    () => false,
+  );
 
   function toggle() {
-    setCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      return next;
-    });
+    const next = !readCollapsed();
+    localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+    window.dispatchEvent(new Event(SIDEBAR_EVENT));
   }
 
   return (

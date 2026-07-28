@@ -30,14 +30,15 @@ export function QueryEditor({ connectionId, initialSql = "", onSqlChange }: Prop
   const [running, setRunning] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<QueryResult | null>(null);
-  const [analysis, setAnalysis] = React.useState<{
+  const [analyzed, setAnalyzed] = React.useState<{
     risk: "safe" | "modifying" | "destructive";
     isUnbounded: boolean;
     keyword?: string;
   } | null>(null);
 
   React.useEffect(() => {
-    setSql(initialSql);
+    // Deferred so it isn't a synchronous setState in the effect.
+    queueMicrotask(() => setSql(initialSql));
   }, [initialSql]);
 
   React.useEffect(() => {
@@ -46,18 +47,18 @@ export function QueryEditor({ connectionId, initialSql = "", onSqlChange }: Prop
 
   // Live risk analysis so the "Ejecutar" button reflects danger.
   React.useEffect(() => {
+    if (!sql.trim()) return;
     let cancelled = false;
-    if (!sql.trim()) {
-      setAnalysis(null);
-      return;
-    }
     void analyzeSqlAction(sql).then((a) => {
-      if (!cancelled) setAnalysis(a);
+      if (!cancelled) setAnalyzed(a);
     });
     return () => {
       cancelled = true;
     };
   }, [sql]);
+
+  // No analysis to show for an empty query.
+  const analysis = sql.trim() ? analyzed : null;
 
   async function run(confirmDestructive = false) {
     if (!connectionId) return;

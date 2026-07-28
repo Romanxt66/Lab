@@ -11,38 +11,37 @@ import {
   type TimeBreakdown,
 } from "@/modules/dev-utils/domain/timestamp";
 import { ErrorNote } from "./shared";
+import { useHydrated } from "@/lib/use-hydrated";
 
 export function TimestampTool() {
   const [input, setInput] = React.useState("");
-  // Start null and fill on mount: computing "now" during SSR would mismatch
-  // the client on hydration.
-  const [data, setData] = React.useState<TimeBreakdown | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
+  // A manual "now" snapshot taken when the user clicks Ahora.
+  const [nowSnapshot, setNowSnapshot] = React.useState<TimeBreakdown | null>(
+    null,
+  );
+  // Computing "now" during SSR would mismatch the client on hydration, so we
+  // hold a placeholder until hydrated.
+  const hydrated = useHydrated();
 
-  React.useEffect(() => {
-    if (!input.trim()) setData(nowBreakdown());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  React.useEffect(() => {
-    if (!input.trim()) {
-      setError(null);
-      return;
+  const { data, error } = React.useMemo<{
+    data: TimeBreakdown | null;
+    error: string | null;
+  }>(() => {
+    if (input.trim()) {
+      const res = parseTime(input);
+      return res.ok
+        ? { data: res.value, error: null }
+        : { data: null, error: res.error };
     }
-    const res = parseTime(input);
-    if (res.ok) {
-      setData(res.value);
-      setError(null);
-    } else {
-      setError(res.error);
-    }
-  }, [input]);
+    return {
+      data: nowSnapshot ?? (hydrated ? nowBreakdown() : null),
+      error: null,
+    };
+  }, [input, hydrated, nowSnapshot]);
 
   function useNow() {
-    const now = nowBreakdown();
-    setData(now);
     setInput("");
-    setError(null);
+    setNowSnapshot(nowBreakdown());
   }
 
   const rows: [string, string][] = data

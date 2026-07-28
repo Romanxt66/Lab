@@ -61,7 +61,9 @@ export function MovementDialog({
   }, [item.id]);
 
   React.useEffect(() => {
-    void loadHistory();
+    void (async () => {
+      await loadHistory();
+    })();
   }, [loadHistory]);
 
   // Close on Escape.

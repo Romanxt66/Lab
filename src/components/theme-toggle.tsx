@@ -3,20 +3,31 @@
 import * as React from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useHydrated } from "@/lib/use-hydrated";
+
+const THEME_EVENT = "lab:themechange";
+
+function subscribeTheme(cb: () => void) {
+  window.addEventListener(THEME_EVENT, cb);
+  return () => window.removeEventListener(THEME_EVENT, cb);
+}
+
+function isDark() {
+  return document.documentElement.classList.contains("dark");
+}
 
 /** Toggles `.dark` on <html> and persists the choice to localStorage. */
 export function ThemeToggle() {
-  const [dark, setDark] = React.useState<boolean | null>(null);
-
-  React.useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"));
-  }, []);
+  const hydrated = useHydrated();
+  // The current theme lives on the <html> element (an external store); read it
+  // reactively so a toggle re-renders the icon without a setState-in-effect.
+  const dark = React.useSyncExternalStore(subscribeTheme, isDark, () => false);
 
   function toggle() {
-    const next = !document.documentElement.classList.contains("dark");
+    const next = !isDark();
     document.documentElement.classList.toggle("dark", next);
     localStorage.setItem("theme", next ? "dark" : "light");
-    setDark(next);
+    window.dispatchEvent(new Event(THEME_EVENT));
   }
 
   return (
@@ -28,7 +39,7 @@ export function ThemeToggle() {
       title="Cambiar tema"
     >
       {/* Avoid hydration mismatch: render nothing until mounted */}
-      {dark === null ? null : dark ? <Sun /> : <Moon />}
+      {!hydrated ? null : dark ? <Sun /> : <Moon />}
     </Button>
   );
 }

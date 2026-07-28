@@ -41,7 +41,9 @@ export function EmailAutomation() {
   }, []);
 
   React.useEffect(() => {
-    refreshTemplates();
+    void (async () => {
+      await refreshTemplates();
+    })();
   }, [refreshTemplates]);
 
   function loadTemplate(id: string) {
@@ -262,11 +264,8 @@ function FromIndicator({ accountId }: { accountId: string }) {
   const [label, setLabel] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    if (!accountId) return;
     let live = true;
-    if (!accountId) {
-      setLabel(null);
-      return;
-    }
     import("@/modules/email/actions").then(async (m) => {
       const list = await m.listGoogleAccountsAction();
       if (!live) return;
@@ -278,12 +277,15 @@ function FromIndicator({ accountId }: { accountId: string }) {
     };
   }, [accountId]);
 
+  // Without an account selected there's no identity to show.
+  const shownLabel = accountId ? label : null;
+
   return (
     <div className="flex items-center gap-2 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
       <Mail className="size-3.5" />
       <span>Enviando desde:</span>
       <span className="font-medium text-foreground">
-        {label ?? "SMTP (.env.local)"}
+        {shownLabel ?? "SMTP (.env.local)"}
       </span>
     </div>
   );

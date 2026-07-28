@@ -44,8 +44,12 @@ export function BudgetsPanel({
   // Budgets track this month's spend. Compute month client-side (hydration).
   const [ym, setYm] = React.useState<{ y: number; m: number } | null>(null);
   React.useEffect(() => {
+    // Seed the current month after mount (a client-only value; deferred so it
+    // isn't a synchronous setState in the effect).
     const now = new Date();
-    setYm({ y: now.getFullYear(), m: now.getMonth() + 1 });
+    queueMicrotask(() =>
+      setYm({ y: now.getFullYear(), m: now.getMonth() + 1 }),
+    );
   }, []);
 
   const refresh = React.useCallback(async () => {
@@ -59,7 +63,9 @@ export function BudgetsPanel({
   }, [ym]);
 
   React.useEffect(() => {
-    void refresh();
+    void (async () => {
+      await refresh();
+    })();
   }, [refresh]);
 
   const expenseCategories = React.useMemo(

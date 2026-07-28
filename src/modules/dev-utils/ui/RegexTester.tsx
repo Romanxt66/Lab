@@ -12,23 +12,17 @@ export function RegexTester() {
   const [pattern, setPattern] = React.useState("");
   const [flags, setFlags] = React.useState<Set<string>>(new Set(["g"]));
   const [text, setText] = React.useState("");
-  const [outcome, setOutcome] = React.useState<RegexOutcome | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (!pattern) {
-      setOutcome(null);
-      setError(null);
-      return;
-    }
+  // The match result is a pure function of pattern/flags/text — derive it.
+  const { outcome, error } = React.useMemo<{
+    outcome: RegexOutcome | null;
+    error: string | null;
+  }>(() => {
+    if (!pattern) return { outcome: null, error: null };
     const res = runRegex(pattern, [...flags].join(""), text);
-    if (res.ok) {
-      setOutcome(res.value);
-      setError(null);
-    } else {
-      setOutcome(null);
-      setError(res.error);
-    }
+    return res.ok
+      ? { outcome: res.value, error: null }
+      : { outcome: null, error: res.error };
   }, [pattern, flags, text]);
 
   function toggleFlag(f: string) {

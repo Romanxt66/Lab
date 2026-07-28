@@ -49,7 +49,9 @@ export function ConnectionsPanel({ selectedId, onSelect }: Props) {
   }, [selectedId, onSelect]);
 
   React.useEffect(() => {
-    void refresh();
+    void (async () => {
+      await refresh();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

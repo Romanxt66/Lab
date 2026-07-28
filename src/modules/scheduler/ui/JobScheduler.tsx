@@ -69,7 +69,9 @@ export function JobScheduler() {
   }, []);
 
   React.useEffect(() => {
-    refresh();
+    void (async () => {
+      await refresh();
+    })();
   }, [refresh]);
 
   const cronOk = isValidCron(form.cron);

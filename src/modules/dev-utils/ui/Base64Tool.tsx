@@ -12,23 +12,17 @@ type Mode = "encode" | "decode";
 export function Base64Tool() {
   const [mode, setMode] = React.useState<Mode>("encode");
   const [input, setInput] = React.useState("");
-  const [output, setOutput] = React.useState("");
-  const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (!input) {
-      setOutput("");
-      setError(null);
-      return;
-    }
+  // Conversion is a pure function of (input, mode) — derive it during render.
+  const { output, error } = React.useMemo<{
+    output: string;
+    error: string | null;
+  }>(() => {
+    if (!input) return { output: "", error: null };
     const res = mode === "encode" ? encodeBase64(input) : decodeBase64(input);
-    if (res.ok) {
-      setOutput(res.value);
-      setError(null);
-    } else {
-      setOutput("");
-      setError(res.error);
-    }
+    return res.ok
+      ? { output: res.value, error: null }
+      : { output: "", error: res.error };
   }, [input, mode]);
 
   return (

@@ -1,4 +1,4 @@
-import { type Result, ok, err } from "@/shared/kernel/result";
+import { type Result, err } from "@/shared/kernel/result";
 import { cronMatches } from "@/modules/scheduler/domain/cron";
 import type {
   ScheduledJobRepoPort,

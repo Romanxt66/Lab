@@ -64,13 +64,18 @@ export function SchemaExplorer({ connectionId, onPickTable }: Props) {
   }, [connectionId]);
 
   React.useEffect(() => {
-    // reset local state whenever the active connection changes
-    setSchemas([]);
-    setOpenSchemas(new Set());
-    setTablesBySchema({});
-    setOpenTables(new Set());
-    setColumnsByTable({});
-    void refresh();
+    // reset local state whenever the active connection changes (deferred so it
+    // isn't a synchronous setState in the effect)
+    queueMicrotask(() => {
+      setSchemas([]);
+      setOpenSchemas(new Set());
+      setTablesBySchema({});
+      setOpenTables(new Set());
+      setColumnsByTable({});
+    });
+    void (async () => {
+      await refresh();
+    })();
   }, [connectionId, refresh]);
 
   async function loadTables(schema: string) {

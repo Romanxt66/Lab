@@ -63,7 +63,9 @@ export function ItemsPanel({
   }, [filterLocation, filterCategory, search]);
 
   React.useEffect(() => {
-    void refresh();
+    void (async () => {
+      await refresh();
+    })();
   }, [refresh]);
 
   async function afterItemChange() {

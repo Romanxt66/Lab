@@ -42,16 +42,29 @@ export function SummaryPanel({
   // (the server's clock/timezone can differ from the browser's).
   React.useEffect(() => {
     if (ym) return;
+    // Deferred so it isn't a synchronous setState in the effect.
     const now = new Date();
-    setYm({ y: now.getFullYear(), m: now.getMonth() + 1 });
+    queueMicrotask(() =>
+      setYm({ y: now.getFullYear(), m: now.getMonth() + 1 }),
+    );
   }, [ym]);
 
   React.useEffect(() => {
     if (!ym) return;
-    setLoading(true);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setLoading(true);
+    });
     void monthlySummaryAction(ym.y, ym.m)
-      .then(setSummary)
-      .finally(() => setLoading(false));
+      .then((s) => {
+        if (!cancelled) setSummary(s);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [ym]);
 
   const currency = accounts[0]?.account.currency ?? "USD";

@@ -73,7 +73,9 @@ export function TransactionsPanel({
   }, [filterAccount, filterKind]);
 
   React.useEffect(() => {
-    void refresh();
+    void (async () => {
+      await refresh();
+    })();
   }, [refresh]);
 
   const accountLookup = React.useMemo(() => {

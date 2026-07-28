@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ok, err, type Result } from "@/shared/kernel/result";
+import { ok, err } from "@/shared/kernel/result";
 import { cronMatches, isValidCron } from "./domain/cron";
 import { RunJob } from "./application/run-job";
 import type {

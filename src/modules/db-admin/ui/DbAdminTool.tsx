@@ -53,7 +53,9 @@ export function DbAdminTool() {
   }, []);
 
   React.useEffect(() => {
-    void refresh();
+    void (async () => {
+      await refresh();
+    })();
   }, [refresh]);
 
   const selected = connections.find((c) => c.id === selectedId) ?? null;
@@ -504,8 +506,11 @@ function SchemaExplorer({
   }, [connectionId]);
 
   React.useEffect(() => {
-    setOpenSchema(null);
-    void refresh();
+    // Reset is deferred so it isn't a synchronous setState in the effect.
+    queueMicrotask(() => setOpenSchema(null));
+    void (async () => {
+      await refresh();
+    })();
   }, [refresh, connectionId]);
 
   const visible = React.useMemo(
@@ -598,8 +603,12 @@ function TableList({
 
   React.useEffect(() => {
     let live = true;
-    setError(null);
-    setTables(null);
+    // Reset is deferred so it isn't a synchronous setState in the effect.
+    queueMicrotask(() => {
+      if (!live) return;
+      setError(null);
+      setTables(null);
+    });
     void listTablesAction(connectionId, schema).then((r) => {
       if (!live) return;
       if (r.ok) setTables(r.value);
@@ -688,8 +697,12 @@ function ColumnList({
 
   React.useEffect(() => {
     let live = true;
-    setError(null);
-    setColumns(null);
+    // Reset is deferred so it isn't a synchronous setState in the effect.
+    queueMicrotask(() => {
+      if (!live) return;
+      setError(null);
+      setColumns(null);
+    });
     void listColumnsAction(connectionId, schema, table).then((r) => {
       if (!live) return;
       if (r.ok) setColumns(r.value);

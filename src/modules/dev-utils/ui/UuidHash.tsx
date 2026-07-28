@@ -25,12 +25,19 @@ export function UuidHash() {
 
 function UuidPanel() {
   const [count, setCount] = React.useState(5);
-  // Generate on mount, not during render: random values differ between the
-  // server and client and would break hydration.
+  // Random values differ between server and client, so seed the first batch
+  // after mount. Deferred past a microtask so it isn't a synchronous setState
+  // in the effect.
   const [uuids, setUuids] = React.useState<string[]>([]);
 
   React.useEffect(() => {
-    setUuids(generateUuids(5));
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (active) setUuids(generateUuids(5));
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
@@ -64,11 +71,8 @@ function HashPanel() {
   const [digest, setDigest] = React.useState("");
 
   React.useEffect(() => {
+    if (!text) return;
     let active = true;
-    if (!text) {
-      setDigest("");
-      return;
-    }
     hashText(algo, text).then((res) => {
       if (active) setDigest(res.ok ? res.value : res.error);
     });
@@ -76,6 +80,9 @@ function HashPanel() {
       active = false;
     };
   }, [text, algo]);
+
+  // Empty input shows no digest without a synchronous setState in the effect.
+  const shownDigest = text ? digest : "";
 
   return (
     <section className="space-y-3">
@@ -106,7 +113,7 @@ function HashPanel() {
           </button>
         ))}
       </div>
-      <OutputBlock value={digest} label={`${algo} (hex)`} />
+      <OutputBlock value={shownDigest} label={`${algo} (hex)`} />
     </section>
   );
 }

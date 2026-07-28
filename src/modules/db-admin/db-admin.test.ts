@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ok, err, type Result } from "@/shared/kernel/result";
+import { ok, type Result } from "@/shared/kernel/result";
 import {
   hostFromUrl,
   validateConnectionUrl,

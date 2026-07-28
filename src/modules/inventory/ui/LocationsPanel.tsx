@@ -30,7 +30,6 @@ import {
   type LocationKind,
   type LocationNode,
 } from "@/modules/inventory/domain/location";
-import { cn } from "@/lib/utils";
 
 const KIND_ICON: Record<LocationKind, React.ComponentType<{ className?: string }>> = {
   room: DoorOpen,
@@ -61,7 +60,9 @@ export function LocationsPanel({
   }, []);
 
   React.useEffect(() => {
-    void refresh();
+    void (async () => {
+      await refresh();
+    })();
   }, [refresh, locations]);
 
   async function afterChange() {

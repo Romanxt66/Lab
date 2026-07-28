@@ -8,23 +8,17 @@ import { ErrorNote, OutputBlock } from "./shared";
 
 export function JwtDecoder() {
   const [token, setToken] = React.useState("");
-  const [decoded, setDecoded] = React.useState<DecodedJwt | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (!token.trim()) {
-      setDecoded(null);
-      setError(null);
-      return;
-    }
+  // Decoding is a pure function of the token — derive it during render.
+  const { decoded, error } = React.useMemo<{
+    decoded: DecodedJwt | null;
+    error: string | null;
+  }>(() => {
+    if (!token.trim()) return { decoded: null, error: null };
     const res = decodeJwt(token);
-    if (res.ok) {
-      setDecoded(res.value);
-      setError(null);
-    } else {
-      setDecoded(null);
-      setError(res.error);
-    }
+    return res.ok
+      ? { decoded: res.value, error: null }
+      : { decoded: null, error: res.error };
   }, [token]);
 
   return (

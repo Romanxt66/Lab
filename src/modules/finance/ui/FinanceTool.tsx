@@ -42,9 +42,13 @@ export function FinanceTool() {
   }, []);
 
   React.useEffect(() => {
-    void Promise.all([refreshAccounts(), refreshCategories()]).finally(() =>
-      setLoading(false),
-    );
+    void (async () => {
+      try {
+        await Promise.all([refreshAccounts(), refreshCategories()]);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [refreshAccounts, refreshCategories]);
 
   if (loading) {
