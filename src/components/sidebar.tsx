@@ -70,7 +70,7 @@ export function Sidebar() {
           collapsed ? "justify-center px-0" : "px-5",
         )}
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-transform duration-300 [transition-timing-function:var(--ease-out)] group-hover:scale-105">
+        <span className="accent-grad flex size-8 shrink-0 items-center justify-center rounded-md text-white shadow-sm transition-transform duration-300 [transition-timing-function:var(--ease-out)] group-hover:scale-105">
           <FlaskConical className="size-4" />
         </span>
         {!collapsed ? <span className="whitespace-nowrap">Lab</span> : null}
@@ -111,14 +111,14 @@ export function Sidebar() {
                             ? "justify-center px-0 py-2"
                             : "gap-2.5 px-2.5 py-1.5",
                           active
-                            ? "bg-foreground/10 font-medium text-foreground"
+                            ? "accent-soft font-medium text-foreground"
                             : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
                         )}
                       >
                         <Icon
                           className={cn(
                             "size-4 shrink-0 transition-transform duration-200 [transition-timing-function:var(--ease-out)] group-hover/nav:scale-110",
-                            active && "scale-110",
+                            active && "accent-text scale-110",
                           )}
                         />
                         {!collapsed ? (

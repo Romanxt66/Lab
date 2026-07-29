@@ -128,7 +128,9 @@
   --color-success: var(--success);
   --color-danger: var(--danger);
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans:
+    var(--font-manrope), var(--font-geist-sans), ui-sans-serif, system-ui,
+    sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -153,12 +155,83 @@ select optgroup {
   color: var(--popover-foreground);
 }
 
+/* --- Personalization -------------------------------------------------------
+ * Accent gradient, font size and density, driven by data-attributes on <html>
+ * (set before paint by personalizationScript). Accent defaults to Violeta. */
+:root {
+  --accent-1: #a855f7;
+  --accent-2: #ec4899;
+  --accent-grad: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  --accent-soft: color-mix(in oklab, var(--accent-1) 16%, transparent);
+  --accent-softer: color-mix(in oklab, var(--accent-1) 9%, transparent);
+
+  /* Font size × density both scale the rem-based UI from the root. */
+  --font-px: 16;
+  --density-factor: 1;
+}
+:root[data-accent="violeta"] {
+  --accent-1: #a855f7;
+  --accent-2: #ec4899;
+}
+:root[data-accent="turquesa"] {
+  --accent-1: #06b6d4;
+  --accent-2: #3b82f6;
+}
+:root[data-accent="esmeralda"] {
+  --accent-1: #10b981;
+  --accent-2: #06b6d4;
+}
+:root[data-accent="ambar"] {
+  --accent-1: #f59e0b;
+  --accent-2: #ef4444;
+}
+:root[data-font="sm"] {
+  --font-px: 15;
+}
+:root[data-font="md"] {
+  --font-px: 16;
+}
+:root[data-font="lg"] {
+  --font-px: 17.5;
+}
+:root[data-density="compact"] {
+  --density-factor: 0.94;
+}
+:root[data-density="comfortable"] {
+  --density-factor: 1;
+}
+
+/* Accent-tinted focus ring across the app. */
+:root,
+.dark {
+  --ring: var(--accent-1);
+}
+
+html {
+  font-size: calc(var(--font-px) * var(--density-factor) * 1px);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans);
+  /* Resolve the font chain on <body> itself, where the next/font variables are
+   * defined (they aren't present at :root, so var(--font-sans) is empty there). */
+  font-family:
+    var(--font-manrope), var(--font-geist-sans), ui-sans-serif, system-ui,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Accent utility classes for brand marks, active nav, highlights. */
+.accent-grad {
+  background: var(--accent-grad);
+}
+.accent-text {
+  color: var(--accent-1);
+}
+.accent-soft {
+  background: var(--accent-soft);
 }
 
 /* Ambient backdrop: soft grayscale light-pools that drift very slowly, giving
@@ -259,11 +332,13 @@ body::after {
     0 10px 26px -8px var(--lg-shadow);
 }
 .liquid-glass-primary {
-  background: var(--lg-primary);
-  color: var(--primary-foreground);
+  /* Primary actions carry the accent gradient instead of the monochrome fill. */
+  background: var(--accent-grad);
+  color: #fff;
 }
 .liquid-glass-primary:hover {
-  background: var(--lg-primary-hover);
+  background: var(--accent-grad);
+  filter: brightness(1.08);
 }
 /* The moving specular sweep — the "liquid" cue. */
 .liquid-glass::after,

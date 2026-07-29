@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTool, TOOLS } from "@/modules/registry";
+import { UsageTracker } from "@/components/usage-tracker";
 
 /** Pre-render a page for every registered, ready tool. */
 export function generateStaticParams() {
@@ -34,6 +35,7 @@ export default async function ToolPage({
 
   return (
     <div className={`mx-auto ${wide ? "max-w-7xl" : "max-w-4xl"} px-6 py-10`}>
+      <UsageTracker slug={slug} />
       <header className="animate-enter mb-8">
         <h1 className="text-2xl font-semibold tracking-tight">{name}</h1>
         <p className="mt-1.5 text-[15px] text-muted-foreground">{description}</p>
