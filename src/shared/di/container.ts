@@ -50,6 +50,9 @@ import { PrismaCategoryRepo } from "@/modules/finance/infrastructure/prisma-cate
 import { PrismaTransactionRepo } from "@/modules/finance/infrastructure/prisma-transaction-repo";
 import { PrismaBudgetRepo } from "@/modules/finance/infrastructure/prisma-budget-repo";
 import { PrismaRecurringRepo } from "@/modules/finance/infrastructure/prisma-recurring-repo";
+import { CoolifyService } from "@/modules/coolify/application/coolify-service";
+import { CoolifyRestAdapter } from "@/modules/coolify/infrastructure/coolify-rest-adapter";
+import { PrismaCoolifyConfigRepo } from "@/modules/coolify/infrastructure/prisma-coolify-config-repo";
 import { InventoryService } from "@/modules/inventory/application/inventory-service";
 import { PrismaLocationRepo } from "@/modules/inventory/infrastructure/prisma-location-repo";
 import { PrismaItemRepo } from "@/modules/inventory/infrastructure/prisma-item-repo";
@@ -182,6 +185,15 @@ export function getProcessRecurring(): ProcessRecurring {
     new PrismaTransactionRepo(),
     new PrismaAccountRepo(),
     getSendNotification(),
+  );
+}
+
+// --- Coolify ---------------------------------------------------------------
+
+export function getCoolifyService(): CoolifyService {
+  return new CoolifyService(
+    new CoolifyRestAdapter(),
+    new PrismaCoolifyConfigRepo(),
   );
 }
 

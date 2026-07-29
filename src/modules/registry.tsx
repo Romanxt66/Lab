@@ -11,6 +11,7 @@ import {
   Wallet,
   Boxes,
   FolderGit2,
+  Rocket,
 } from "lucide-react";
 import { EmailAutomation } from "@/modules/email/ui/EmailAutomation";
 import { ScraperTool } from "@/modules/scraper/ui/ScraperTool";
@@ -21,6 +22,7 @@ import { DbAdminTool } from "@/modules/db-admin/ui/DbAdminTool";
 import { FinanceTool } from "@/modules/finance/ui/FinanceTool";
 import { InventoryTool } from "@/modules/inventory/ui/InventoryTool";
 import { GitHubTool } from "@/modules/github/ui/GitHubTool";
+import { CoolifyTool } from "@/modules/coolify/ui/CoolifyTool";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -39,7 +41,8 @@ export type ToolCategory =
   | "database"
   | "finance"
   | "inventory"
-  | "github";
+  | "github"
+  | "deploy";
 
 export interface CategoryMeta {
   id: ToolCategory;
@@ -51,6 +54,7 @@ export const CATEGORIES: Record<ToolCategory, CategoryMeta> = {
   finance: { id: "finance", label: "Finanzas", icon: Wallet },
   inventory: { id: "inventory", label: "Inventario", icon: Boxes },
   github: { id: "github", label: "GitHub", icon: FolderGit2 },
+  deploy: { id: "deploy", label: "Despliegues", icon: Rocket },
   database: { id: "database", label: "Base de datos", icon: Database },
   calendar: { id: "calendar", label: "Calendario", icon: CalendarDays },
   email: { id: "email", label: "Correos", icon: Mail },
@@ -167,6 +171,17 @@ export const TOOLS: ToolMeta[] = [
     icon: FolderGit2,
     status: "ready",
     Component: GitHubTool,
+    wide: true,
+  },
+  {
+    slug: "coolify",
+    name: "Despliegues (Coolify)",
+    description:
+      "Panel sobre tu Coolify: despliega, controla apps y revisa logs y variables.",
+    category: "deploy",
+    icon: Rocket,
+    status: "ready",
+    Component: CoolifyTool,
     wide: true,
   },
 ];
