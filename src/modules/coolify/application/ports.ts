@@ -15,6 +15,20 @@ export interface CoolifyCredentials {
 
 export type AppAction = "start" | "stop" | "restart";
 
+/** Editable application configuration (subset of Coolify's PATCH fields). */
+export interface AppConfigPatch {
+  name: string;
+  description: string;
+  domains: string;
+  gitBranch: string;
+  buildPack: string;
+  portsExposes: string;
+  installCommand: string;
+  buildCommand: string;
+  startCommand: string;
+  baseDirectory: string;
+}
+
 /** Input to create/update an application environment variable. */
 export interface EnvInput {
   key: string;
@@ -56,6 +70,11 @@ export interface CoolifyClientPort {
     input: CreateAppInput,
   ): Promise<Result<string>>;
   getApp(cred: CoolifyCredentials, uuid: string): Promise<Result<CoolifyApp>>;
+  updateApp(
+    cred: CoolifyCredentials,
+    uuid: string,
+    patch: AppConfigPatch,
+  ): Promise<Result<string>>;
   deploy(cred: CoolifyCredentials, uuid: string, force: boolean): Promise<Result<string>>;
   control(
     cred: CoolifyCredentials,

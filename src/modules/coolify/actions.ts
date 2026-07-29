@@ -14,6 +14,7 @@ import type {
 } from "@/modules/coolify/domain/resource";
 import type {
   AppAction,
+  AppConfigPatch,
   CreateAppInput,
   EnvInput,
 } from "@/modules/coolify/application/ports";
@@ -59,6 +60,13 @@ export async function createCoolifyAppAction(
   input: CreateAppInput,
 ): Promise<Result<string>> {
   return getCoolifyService().createApp(input);
+}
+
+export async function updateCoolifyAppAction(
+  uuid: string,
+  patch: AppConfigPatch,
+): Promise<Result<string>> {
+  return getCoolifyService().updateApp(uuid, patch);
 }
 
 export async function deployCoolifyAction(

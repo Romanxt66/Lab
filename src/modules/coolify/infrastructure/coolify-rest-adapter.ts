@@ -2,6 +2,7 @@ import "server-only";
 import { type Result, ok, err } from "@/shared/kernel/result";
 import type {
   AppAction,
+  AppConfigPatch,
   CoolifyClientPort,
   CoolifyCredentials,
   CreateAppInput,
@@ -188,6 +189,31 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
       : res;
   }
 
+  async updateApp(
+    cred: CoolifyCredentials,
+    uuid: string,
+    patch: AppConfigPatch,
+  ): Promise<Result<string>> {
+    const body: Record<string, unknown> = {
+      name: patch.name,
+      description: patch.description,
+      domains: patch.domains,
+      git_branch: patch.gitBranch,
+      build_pack: patch.buildPack,
+      ports_exposes: patch.portsExposes,
+      install_command: patch.installCommand,
+      build_command: patch.buildCommand,
+      start_command: patch.startCommand,
+      base_directory: patch.baseDirectory,
+    };
+    const res = await this.send<{ message?: string }>(
+      cred,
+      `/applications/${uuid}`,
+      { method: "PATCH", body },
+    );
+    return res.ok ? ok(res.value.message ?? "Configuración guardada.") : res;
+  }
+
   async deploy(
     cred: CoolifyCredentials,
     uuid: string,
@@ -294,6 +320,11 @@ interface RawApp {
   git_repository?: string | null;
   git_branch?: string | null;
   build_pack?: string | null;
+  ports_exposes?: string | null;
+  install_command?: string | null;
+  build_command?: string | null;
+  start_command?: string | null;
+  base_directory?: string | null;
   environment?: { name?: string; project?: { name?: string } } | null;
   environment_name?: string | null;
   project_name?: string | null;
@@ -366,6 +397,11 @@ function mapApp(a: RawApp): CoolifyApp {
       str(a.environment?.project?.name ?? null) ?? str(a.project_name ?? null),
     environmentName:
       str(a.environment?.name ?? null) ?? str(a.environment_name ?? null),
+    portsExposes: a.ports_exposes ?? "",
+    installCommand: a.install_command ?? "",
+    buildCommand: a.build_command ?? "",
+    startCommand: a.start_command ?? "",
+    baseDirectory: a.base_directory ?? "",
   };
 }
 

@@ -23,6 +23,12 @@ export interface CoolifyApp {
   buildPack: string | null;
   projectName: string | null;
   environmentName: string | null;
+  // Editable configuration (populated by getApp; may be empty from the list).
+  portsExposes: string;
+  installCommand: string;
+  buildCommand: string;
+  startCommand: string;
+  baseDirectory: string;
 }
 
 export interface CoolifyProject {

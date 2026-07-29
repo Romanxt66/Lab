@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
   coolifyLogsAction,
@@ -19,10 +21,16 @@ import {
   createCoolifyEnvAction,
   updateCoolifyEnvAction,
   deleteCoolifyEnvAction,
+  coolifyAppAction,
+  updateCoolifyAppAction,
 } from "@/modules/coolify/actions";
-import type { CoolifyApp, CoolifyEnv } from "@/modules/coolify/domain/resource";
+import {
+  BUILD_PACKS,
+  type CoolifyApp,
+  type CoolifyEnv,
+} from "@/modules/coolify/domain/resource";
 
-type Tab = "logs" | "envs";
+type Tab = "logs" | "envs" | "config";
 
 /** Modal with an app's recent logs and an environment-variable editor. */
 export function AppDetailDialog({
@@ -76,6 +84,7 @@ export function AppDetailDialog({
             [
               { id: "logs", label: "Logs" },
               { id: "envs", label: "Variables" },
+              { id: "config", label: "Configuración" },
             ] as const
           ).map((t) => (
             <button
@@ -96,8 +105,10 @@ export function AppDetailDialog({
         <div className="min-h-0 flex-1 overflow-auto">
           {tab === "logs" ? (
             <LogsTab uuid={app.uuid} />
-          ) : (
+          ) : tab === "envs" ? (
             <EnvsTab uuid={app.uuid} />
+          ) : (
+            <ConfigTab app={app} />
           )}
         </div>
       </div>
@@ -270,6 +281,196 @@ function EnvsTab({ uuid }: { uuid: string }) {
           )}
         </ul>
       )}
+    </div>
+  );
+}
+
+function ConfigTab({ app }: { app: CoolifyApp }) {
+  // Fetch fresh full data (the list app may lack commands/ports).
+  const [data, setData] = React.useState<CoolifyApp>(app);
+  const [loading, setLoading] = React.useState(true);
+  const [saving, setSaving] = React.useState(false);
+  const [msg, setMsg] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Form fields
+  const [name, setName] = React.useState(app.name);
+  const [description, setDescription] = React.useState(app.description ?? "");
+  const [domains, setDomains] = React.useState(app.fqdn ?? "");
+  const [gitBranch, setGitBranch] = React.useState(app.gitBranch ?? "");
+  const [buildPack, setBuildPack] = React.useState(app.buildPack ?? "nixpacks");
+  const [portsExposes, setPortsExposes] = React.useState(app.portsExposes);
+  const [installCommand, setInstallCommand] = React.useState(app.installCommand);
+  const [buildCommand, setBuildCommand] = React.useState(app.buildCommand);
+  const [startCommand, setStartCommand] = React.useState(app.startCommand);
+  const [baseDirectory, setBaseDirectory] = React.useState(app.baseDirectory);
+
+  React.useEffect(() => {
+    void (async () => {
+      const res = await coolifyAppAction(app.uuid);
+      if (res.ok) {
+        const a = res.value;
+        setData(a);
+        setName(a.name);
+        setDescription(a.description ?? "");
+        setDomains(a.fqdn ?? "");
+        setGitBranch(a.gitBranch ?? "");
+        setBuildPack(a.buildPack ?? "nixpacks");
+        setPortsExposes(a.portsExposes);
+        setInstallCommand(a.installCommand);
+        setBuildCommand(a.buildCommand);
+        setStartCommand(a.startCommand);
+        setBaseDirectory(a.baseDirectory);
+      }
+      setLoading(false);
+    })();
+  }, [app.uuid]);
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    setMsg(null);
+    const res = await updateCoolifyAppAction(app.uuid, {
+      name,
+      description,
+      domains,
+      gitBranch,
+      buildPack,
+      portsExposes,
+      installCommand,
+      buildCommand,
+      startCommand,
+      baseDirectory,
+    });
+    if (res.ok) setMsg(res.value);
+    else setError(res.error);
+    setSaving(false);
+  }
+
+  return (
+    <div className="space-y-3">
+      {loading ? (
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="size-3.5 animate-spin" />
+          Cargando valores actuales…
+        </p>
+      ) : null}
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Nombre</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Build pack</Label>
+          <select
+            value={buildPack}
+            onChange={(e) => setBuildPack(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+          >
+            {BUILD_PACKS.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Descripción</Label>
+        <Input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Dominios (separados por coma)</Label>
+        <Input
+          value={domains}
+          onChange={(e) => setDomains(e.target.value)}
+          placeholder="https://app.midominio.com"
+          className="text-xs"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Rama</Label>
+          <Input
+            value={gitBranch}
+            onChange={(e) => setGitBranch(e.target.value)}
+            className="font-mono"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Puerto expuesto</Label>
+          <Input
+            value={portsExposes}
+            onChange={(e) => setPortsExposes(e.target.value)}
+            className="font-mono"
+            placeholder="3000"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Directorio base</Label>
+        <Input
+          value={baseDirectory}
+          onChange={(e) => setBaseDirectory(e.target.value)}
+          className="font-mono"
+          placeholder="/"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Comando de instalación</Label>
+        <Input
+          value={installCommand}
+          onChange={(e) => setInstallCommand(e.target.value)}
+          className="font-mono text-xs"
+          placeholder="npm ci"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Comando de build</Label>
+        <Input
+          value={buildCommand}
+          onChange={(e) => setBuildCommand(e.target.value)}
+          className="font-mono text-xs"
+          placeholder="npm run build"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Comando de arranque</Label>
+        <Textarea
+          value={startCommand}
+          onChange={(e) => setStartCommand(e.target.value)}
+          className="min-h-14 font-mono text-xs"
+          placeholder="npm run start"
+        />
+      </div>
+
+      {error ? (
+        <p className="rounded-md bg-danger/10 p-2 text-sm text-danger">{error}</p>
+      ) : null}
+      {msg ? (
+        <p className="rounded-md bg-success/10 p-2 text-sm text-success">
+          {msg} · vuelve a desplegar para aplicar los cambios.
+        </p>
+      ) : null}
+
+      <div className="flex items-center gap-2 pt-1">
+        <Button onClick={save} disabled={saving || loading || !name.trim()}>
+          {saving ? <Loader2 className="animate-spin" /> : <Check className="size-3.5" />}
+          Guardar configuración
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          {data.gitRepository ? data.gitRepository.replace(/^https?:\/\//, "") : ""}
+        </span>
+      </div>
     </div>
   );
 }

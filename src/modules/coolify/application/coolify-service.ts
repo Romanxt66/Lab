@@ -12,6 +12,7 @@ import type {
 } from "@/modules/coolify/domain/resource";
 import type {
   AppAction,
+  AppConfigPatch,
   CoolifyClientPort,
   CoolifyConfigRepoPort,
   CoolifyCredentials,
@@ -103,6 +104,16 @@ export class CoolifyService {
     const c = await this.cred();
     if (!c.ok) return c;
     return this.client.createApp(c.value, input);
+  }
+
+  async updateApp(
+    uuid: string,
+    patch: AppConfigPatch,
+  ): Promise<Result<string>> {
+    if (!patch.name.trim()) return err("El nombre no puede estar vacío.");
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.updateApp(c.value, uuid, patch);
   }
 
   async deploy(uuid: string, force = false): Promise<Result<string>> {
