@@ -16,6 +16,9 @@ export interface CoolifyCredentials {
 
 export type AppAction = "start" | "stop" | "restart";
 
+/** API path segment for a controllable resource type. */
+export type ResourceKind = "databases" | "services";
+
 /** Editable application configuration (subset of Coolify's PATCH fields). */
 export interface AppConfigPatch {
   name: string;
@@ -105,6 +108,19 @@ export interface CoolifyClientPort {
   cancelDeployment(
     cred: CoolifyCredentials,
     uuid: string,
+  ): Promise<Result<string>>;
+  /** Start/stop/restart a database or service. */
+  controlResource(
+    cred: CoolifyCredentials,
+    kind: ResourceKind,
+    uuid: string,
+    action: AppAction,
+  ): Promise<Result<string>>;
+  resourceLogs(
+    cred: CoolifyCredentials,
+    kind: ResourceKind,
+    uuid: string,
+    lines: number,
   ): Promise<Result<string>>;
 }
 

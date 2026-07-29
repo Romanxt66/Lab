@@ -15,6 +15,7 @@ import {
   Database,
   Boxes,
   GitBranch,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,8 @@ import {
   controlCoolifyAction,
   coolifyDeploymentsAction,
   cancelCoolifyDeploymentAction,
+  controlCoolifyResourceAction,
+  coolifyResourceLogsAction,
 } from "@/modules/coolify/actions";
 import type { CoolifyConfigDTO } from "@/modules/coolify/domain/config";
 import {
@@ -35,7 +38,10 @@ import {
   type CoolifyOverview,
   type CoolifyResource,
 } from "@/modules/coolify/domain/resource";
-import type { AppAction } from "@/modules/coolify/application/ports";
+import type {
+  AppAction,
+  ResourceKind,
+} from "@/modules/coolify/application/ports";
 import { ConnectionPanel } from "./ConnectionPanel";
 import { AppDetailDialog } from "./AppDetailDialog";
 import { CreateAppDialog } from "./CreateAppDialog";
@@ -196,13 +202,17 @@ function Dashboard({
           <div className="grid gap-6 md:grid-cols-2">
             <ResourceList
               title="Bases de datos"
+              kind="databases"
               icon={<Database className="size-4" />}
               items={overview.databases}
+              onRefresh={refresh}
             />
             <ResourceList
               title="Servicios"
+              kind="services"
               icon={<Boxes className="size-4" />}
               items={overview.services}
+              onRefresh={refresh}
             />
           </div>
 
@@ -497,13 +507,18 @@ function AppCard({
 
 function ResourceList({
   title,
+  kind,
   icon,
   items,
+  onRefresh,
 }: {
   title: string;
+  kind: ResourceKind;
   icon: React.ReactNode;
   items: CoolifyResource[];
+  onRefresh: () => void | Promise<void>;
 }) {
+  const [logsFor, setLogsFor] = React.useState<CoolifyResource | null>(null);
   return (
     <section>
       <SectionTitle count={items.length} icon={icon}>
@@ -514,17 +529,169 @@ function ResourceList({
       ) : (
         <div className="glass divide-y divide-border/60 overflow-hidden rounded-lg border border-border/60">
           {items.map((r) => (
-            <div key={r.uuid} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-              <span className={cn("size-2 shrink-0 rounded-full", STATE_DOT[r.state])} />
-              <span className="truncate font-medium">{r.name}</span>
-              <span className={cn("ml-auto text-xs", STATE_TEXT[r.state])}>
-                {STATE_LABELS[r.state]}
-              </span>
-            </div>
+            <ResourceRow
+              key={r.uuid}
+              resource={r}
+              kind={kind}
+              onLogs={() => setLogsFor(r)}
+              onChanged={onRefresh}
+            />
           ))}
         </div>
       )}
+      {logsFor ? (
+        <ResourceLogsDialog
+          kind={kind}
+          resource={logsFor}
+          onClose={() => setLogsFor(null)}
+        />
+      ) : null}
     </section>
+  );
+}
+
+function ResourceRow({
+  resource,
+  kind,
+  onLogs,
+  onChanged,
+}: {
+  resource: CoolifyResource;
+  kind: ResourceKind;
+  onLogs: () => void;
+  onChanged: () => void | Promise<void>;
+}) {
+  const [busy, setBusy] = React.useState<null | AppAction>(null);
+  const running = resource.state === "running" || resource.state === "degraded";
+
+  async function act(action: AppAction) {
+    setBusy(action);
+    await controlCoolifyResourceAction(kind, resource.uuid, action);
+    setBusy(null);
+    setTimeout(() => void onChanged(), 1200);
+  }
+
+  return (
+    <div className="group flex items-center gap-2 px-4 py-2.5 text-sm">
+      <span className={cn("size-2 shrink-0 rounded-full", STATE_DOT[resource.state])} />
+      <span className="min-w-0 flex-1 truncate font-medium">{resource.name}</span>
+      <span className={cn("shrink-0 text-xs", STATE_TEXT[resource.state])}>
+        {STATE_LABELS[resource.state]}
+      </span>
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        {running ? (
+          <IconBtn title="Detener" busy={busy === "stop"} onClick={() => act("stop")}>
+            <Square className="size-3.5" />
+          </IconBtn>
+        ) : (
+          <IconBtn title="Iniciar" busy={busy === "start"} onClick={() => act("start")}>
+            <Play className="size-3.5" />
+          </IconBtn>
+        )}
+        <IconBtn title="Reiniciar" busy={busy === "restart"} onClick={() => act("restart")}>
+          <RotateCw className="size-3.5" />
+        </IconBtn>
+        <IconBtn title="Logs" onClick={onLogs}>
+          <ScrollText className="size-3.5" />
+        </IconBtn>
+      </div>
+    </div>
+  );
+}
+
+function IconBtn({
+  children,
+  title,
+  busy,
+  onClick,
+}: {
+  children: React.ReactNode;
+  title: string;
+  busy?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      disabled={busy}
+      className="rounded p-1.5 text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+    >
+      {busy ? <Loader2 className="size-3.5 animate-spin" /> : children}
+    </button>
+  );
+}
+
+function ResourceLogsDialog({
+  kind,
+  resource,
+  onClose,
+}: {
+  kind: ResourceKind;
+  resource: CoolifyResource;
+  onClose: () => void;
+}) {
+  const [logs, setLogs] = React.useState("");
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const res = await coolifyResourceLogsAction(kind, resource.uuid, 300);
+    if (res.ok) setLogs(res.value || "(sin logs)");
+    else setError(res.error);
+    setLoading(false);
+  }, [kind, resource.uuid]);
+
+  React.useEffect(() => {
+    void (async () => {
+      await load();
+    })();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [load, onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="glass flex max-h-[85vh] w-full max-w-2xl flex-col rounded-xl border border-border/60 p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="truncate font-medium">{resource.name} · logs</h3>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+              <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
+            </Button>
+            <button
+              onClick={onClose}
+              className="rounded p-1 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 overflow-auto">
+          {error ? (
+            <p className="rounded-md bg-danger/10 p-3 text-sm text-danger">{error}</p>
+          ) : loading ? (
+            <p className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Cargando…
+            </p>
+          ) : (
+            <pre className="whitespace-pre-wrap break-words rounded-md bg-foreground/5 p-3 font-mono text-xs leading-relaxed">
+              {logs}
+            </pre>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

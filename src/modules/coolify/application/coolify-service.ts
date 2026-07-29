@@ -19,6 +19,7 @@ import type {
   CoolifyCredentials,
   CreateAppInput,
   EnvInput,
+  ResourceKind,
 } from "./ports";
 
 /**
@@ -177,5 +178,25 @@ export class CoolifyService {
     const c = await this.cred();
     if (!c.ok) return c;
     return this.client.cancelDeployment(c.value, uuid);
+  }
+
+  async controlResource(
+    kind: ResourceKind,
+    uuid: string,
+    action: AppAction,
+  ): Promise<Result<string>> {
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.controlResource(c.value, kind, uuid, action);
+  }
+
+  async resourceLogs(
+    kind: ResourceKind,
+    uuid: string,
+    lines = 200,
+  ): Promise<Result<string>> {
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.resourceLogs(c.value, kind, uuid, lines);
   }
 }

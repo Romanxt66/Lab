@@ -7,6 +7,7 @@ import type {
   CoolifyCredentials,
   CreateAppInput,
   EnvInput,
+  ResourceKind,
 } from "@/modules/coolify/application/ports";
 import {
   parseState,
@@ -332,6 +333,38 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
       { method: "POST" },
     );
     return res.ok ? ok(res.value.message ?? "Despliegue cancelado.") : res;
+  }
+
+  async controlResource(
+    cred: CoolifyCredentials,
+    kind: ResourceKind,
+    uuid: string,
+    action: AppAction,
+  ): Promise<Result<string>> {
+    const res = await this.send<{ message?: string }>(
+      cred,
+      `/${kind}/${uuid}/${action}`,
+      { method: "POST" },
+    );
+    if (!res.ok) return res;
+    const done =
+      action === "start" ? "iniciado" : action === "stop" ? "detenido" : "reiniciado";
+    return ok(res.value.message ?? `Recurso ${done}.`);
+  }
+
+  async resourceLogs(
+    cred: CoolifyCredentials,
+    kind: ResourceKind,
+    uuid: string,
+    lines: number,
+  ): Promise<Result<string>> {
+    const res = await this.getJson<{ logs?: string } | string>(
+      cred,
+      `/${kind}/${uuid}/logs?lines=${lines}`,
+    );
+    if (!res.ok) return res;
+    const v = res.value;
+    return ok(typeof v === "string" ? v : v.logs ?? "");
   }
 }
 

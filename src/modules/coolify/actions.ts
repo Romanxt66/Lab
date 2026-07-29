@@ -18,6 +18,7 @@ import type {
   AppConfigPatch,
   CreateAppInput,
   EnvInput,
+  ResourceKind,
 } from "@/modules/coolify/application/ports";
 
 // --- Connection ------------------------------------------------------------
@@ -128,4 +129,20 @@ export async function cancelCoolifyDeploymentAction(
   uuid: string,
 ): Promise<Result<string>> {
   return getCoolifyService().cancelDeployment(uuid);
+}
+
+export async function controlCoolifyResourceAction(
+  kind: ResourceKind,
+  uuid: string,
+  action: AppAction,
+): Promise<Result<string>> {
+  return getCoolifyService().controlResource(kind, uuid, action);
+}
+
+export async function coolifyResourceLogsAction(
+  kind: ResourceKind,
+  uuid: string,
+  lines = 200,
+): Promise<Result<string>> {
+  return getCoolifyService().resourceLogs(kind, uuid, lines);
 }
