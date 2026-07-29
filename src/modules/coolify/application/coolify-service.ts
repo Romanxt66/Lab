@@ -14,6 +14,7 @@ import type {
   CoolifyClientPort,
   CoolifyConfigRepoPort,
   CoolifyCredentials,
+  EnvInput,
 } from "./ports";
 
 /**
@@ -95,6 +96,32 @@ export class CoolifyService {
     const c = await this.cred();
     if (!c.ok) return c;
     return this.client.listEnvs(c.value, uuid);
+  }
+
+  async createEnv(uuid: string, input: EnvInput): Promise<Result<string>> {
+    if (!input.key.trim()) return err("La clave no puede estar vacía.");
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.createEnv(c.value, uuid, {
+      ...input,
+      key: input.key.trim(),
+    });
+  }
+
+  async updateEnv(uuid: string, input: EnvInput): Promise<Result<string>> {
+    if (!input.key.trim()) return err("La clave no puede estar vacía.");
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.updateEnv(c.value, uuid, {
+      ...input,
+      key: input.key.trim(),
+    });
+  }
+
+  async deleteEnv(uuid: string, envUuid: string): Promise<Result<string>> {
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.deleteEnv(c.value, uuid, envUuid);
   }
 
   async logs(uuid: string, lines = 200): Promise<Result<string>> {

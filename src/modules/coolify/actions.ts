@@ -11,7 +11,7 @@ import type {
   CoolifyEnv,
   CoolifyOverview,
 } from "@/modules/coolify/domain/resource";
-import type { AppAction } from "@/modules/coolify/application/ports";
+import type { AppAction, EnvInput } from "@/modules/coolify/application/ports";
 
 // --- Connection ------------------------------------------------------------
 
@@ -62,6 +62,27 @@ export async function coolifyEnvsAction(
   uuid: string,
 ): Promise<Result<CoolifyEnv[]>> {
   return getCoolifyService().listEnvs(uuid);
+}
+
+export async function createCoolifyEnvAction(
+  uuid: string,
+  input: EnvInput,
+): Promise<Result<string>> {
+  return getCoolifyService().createEnv(uuid, input);
+}
+
+export async function updateCoolifyEnvAction(
+  uuid: string,
+  input: EnvInput,
+): Promise<Result<string>> {
+  return getCoolifyService().updateEnv(uuid, input);
+}
+
+export async function deleteCoolifyEnvAction(
+  uuid: string,
+  envUuid: string,
+): Promise<Result<string>> {
+  return getCoolifyService().deleteEnv(uuid, envUuid);
 }
 
 export async function coolifyLogsAction(

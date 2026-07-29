@@ -4,6 +4,7 @@ import type {
   AppAction,
   CoolifyClientPort,
   CoolifyCredentials,
+  EnvInput,
 } from "@/modules/coolify/application/ports";
 import {
   parseState,
@@ -44,15 +45,20 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
   private async request(
     cred: CoolifyCredentials,
     path: string,
+    init?: { method?: string; body?: unknown },
   ): Promise<Result<Response>> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${cred.token}`,
+        Accept: "application/json",
+      };
+      if (init?.body !== undefined) headers["Content-Type"] = "application/json";
       const res = await fetch(`${cred.baseUrl}/api/v1${path}`, {
-        headers: {
-          Authorization: `Bearer ${cred.token}`,
-          Accept: "application/json",
-        },
+        method: init?.method ?? "GET",
+        headers,
+        body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
         signal: controller.signal,
         cache: "no-store",
       });
@@ -67,18 +73,24 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
     }
   }
 
-  private async getJson<T>(
+  private async send<T>(
     cred: CoolifyCredentials,
     path: string,
+    init?: { method?: string; body?: unknown },
   ): Promise<Result<T>> {
-    const res = await this.request(cred, path);
+    const res = await this.request(cred, path, init);
     if (!res.ok) return res;
     if (!res.value.ok) return err(await toError(res.value));
     try {
-      return ok((await res.value.json()) as T);
+      const text = await res.value.text();
+      return ok((text ? JSON.parse(text) : {}) as T);
     } catch {
       return err("Coolify devolvió una respuesta no válida.");
     }
+  }
+
+  private getJson<T>(cred: CoolifyCredentials, path: string): Promise<Result<T>> {
+    return this.send<T>(cred, path);
   }
 
   async ping(cred: CoolifyCredentials): Promise<Result<string>> {
@@ -124,9 +136,11 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
     uuid: string,
     force: boolean,
   ): Promise<Result<string>> {
-    const res = await this.getJson<{ message?: string }>(
+    // POST /deploy?uuid=&force= (query params, no body).
+    const res = await this.send<{ message?: string }>(
       cred,
       `/deploy?uuid=${encodeURIComponent(uuid)}&force=${force ? "true" : "false"}`,
+      { method: "POST" },
     );
     return res.ok ? ok(res.value.message ?? "Despliegue encolado.") : res;
   }
@@ -136,9 +150,11 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
     uuid: string,
     action: AppAction,
   ): Promise<Result<string>> {
-    const res = await this.getJson<{ message?: string }>(
+    // Control ops are POST (start/stop/restart), optionally with query params.
+    const res = await this.send<{ message?: string }>(
       cred,
       `/applications/${uuid}/${action}`,
+      { method: "POST" },
     );
     if (!res.ok) return res;
     const done =
@@ -152,15 +168,46 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
   ): Promise<Result<CoolifyEnv[]>> {
     const res = await this.getJson<RawEnv[]>(cred, `/applications/${uuid}/envs`);
     if (!res.ok) return res;
-    return ok(
-      res.value.map((e) => ({
-        uuid: String(e.uuid ?? e.key),
-        key: String(e.key ?? ""),
-        value: String(e.value ?? ""),
-        isBuildTime: Boolean(e.is_build_time),
-        isPreview: Boolean(e.is_preview),
-      })),
+    return ok(res.value.map(mapEnv));
+  }
+
+  async createEnv(
+    cred: CoolifyCredentials,
+    uuid: string,
+    input: EnvInput,
+  ): Promise<Result<string>> {
+    const res = await this.send<{ message?: string; uuid?: string }>(
+      cred,
+      `/applications/${uuid}/envs`,
+      { method: "POST", body: toEnvBody(input) },
     );
+    return res.ok ? ok(res.value.message ?? "Variable creada.") : res;
+  }
+
+  async updateEnv(
+    cred: CoolifyCredentials,
+    uuid: string,
+    input: EnvInput,
+  ): Promise<Result<string>> {
+    const res = await this.send<{ message?: string }>(
+      cred,
+      `/applications/${uuid}/envs`,
+      { method: "PATCH", body: toEnvBody(input) },
+    );
+    return res.ok ? ok(res.value.message ?? "Variable actualizada.") : res;
+  }
+
+  async deleteEnv(
+    cred: CoolifyCredentials,
+    uuid: string,
+    envUuid: string,
+  ): Promise<Result<string>> {
+    const res = await this.send<{ message?: string }>(
+      cred,
+      `/applications/${uuid}/envs/${envUuid}`,
+      { method: "DELETE" },
+    );
+    return res.ok ? ok(res.value.message ?? "Variable eliminada.") : res;
   }
 
   async logs(
@@ -217,6 +264,28 @@ interface RawEnv {
   value?: string;
   is_build_time?: boolean;
   is_preview?: boolean;
+  is_literal?: boolean;
+}
+
+function mapEnv(e: RawEnv): CoolifyEnv {
+  return {
+    uuid: String(e.uuid ?? e.key ?? ""),
+    key: String(e.key ?? ""),
+    value: String(e.value ?? ""),
+    isBuildTime: Boolean(e.is_build_time),
+    isPreview: Boolean(e.is_preview),
+    isLiteral: Boolean(e.is_literal),
+  };
+}
+
+/** Map our EnvInput to Coolify's snake_case body. */
+function toEnvBody(input: EnvInput): Record<string, unknown> {
+  return {
+    key: input.key,
+    value: input.value,
+    is_preview: input.isPreview,
+    is_literal: input.isLiteral,
+  };
 }
 
 function mapApp(a: RawApp): CoolifyApp {

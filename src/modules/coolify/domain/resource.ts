@@ -60,6 +60,7 @@ export interface CoolifyEnv {
   value: string;
   isBuildTime: boolean;
   isPreview: boolean;
+  isLiteral: boolean;
 }
 
 /**

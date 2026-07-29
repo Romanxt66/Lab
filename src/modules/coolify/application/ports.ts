@@ -14,6 +14,14 @@ export interface CoolifyCredentials {
 
 export type AppAction = "start" | "stop" | "restart";
 
+/** Input to create/update an application environment variable. */
+export interface EnvInput {
+  key: string;
+  value: string;
+  isPreview: boolean;
+  isLiteral: boolean;
+}
+
 /** Talks to the Coolify REST API. Adapters live in `infrastructure/`. */
 export interface CoolifyClientPort {
   /** Cheap call to validate the connection (GET /version). */
@@ -27,6 +35,21 @@ export interface CoolifyClientPort {
     action: AppAction,
   ): Promise<Result<string>>;
   listEnvs(cred: CoolifyCredentials, uuid: string): Promise<Result<CoolifyEnv[]>>;
+  createEnv(
+    cred: CoolifyCredentials,
+    uuid: string,
+    input: EnvInput,
+  ): Promise<Result<string>>;
+  updateEnv(
+    cred: CoolifyCredentials,
+    uuid: string,
+    input: EnvInput,
+  ): Promise<Result<string>>;
+  deleteEnv(
+    cred: CoolifyCredentials,
+    uuid: string,
+    envUuid: string,
+  ): Promise<Result<string>>;
   logs(cred: CoolifyCredentials, uuid: string, lines: number): Promise<Result<string>>;
 }
 
