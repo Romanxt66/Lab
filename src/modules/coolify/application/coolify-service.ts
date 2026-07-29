@@ -7,6 +7,7 @@ import {
 import type {
   CoolifyApp,
   CoolifyEnv,
+  CoolifyEnvironment,
   CoolifyOverview,
 } from "@/modules/coolify/domain/resource";
 import type {
@@ -14,6 +15,7 @@ import type {
   CoolifyClientPort,
   CoolifyConfigRepoPort,
   CoolifyCredentials,
+  CreateAppInput,
   EnvInput,
 } from "./ports";
 
@@ -78,6 +80,29 @@ export class CoolifyService {
     const c = await this.cred();
     if (!c.ok) return c;
     return this.client.getApp(c.value, uuid);
+  }
+
+  async listEnvironments(
+    projectUuid: string,
+  ): Promise<Result<CoolifyEnvironment[]>> {
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.listEnvironments(c.value, projectUuid);
+  }
+
+  async createApp(input: CreateAppInput): Promise<Result<string>> {
+    if (!input.projectUuid) return err("Elige un proyecto.");
+    if (!input.environmentUuid) return err("Elige un entorno.");
+    if (!input.serverUuid) return err("Elige un servidor.");
+    if (input.source === "public") {
+      if (!input.gitRepository.trim()) return err("Falta el repositorio Git.");
+      if (!input.gitBranch.trim()) return err("Falta la rama.");
+    } else if (!input.dockerfile.trim()) {
+      return err("Pega el contenido del Dockerfile.");
+    }
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.createApp(c.value, input);
   }
 
   async deploy(uuid: string, force = false): Promise<Result<string>> {

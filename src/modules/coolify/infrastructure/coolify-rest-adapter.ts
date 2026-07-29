@@ -4,12 +4,14 @@ import type {
   AppAction,
   CoolifyClientPort,
   CoolifyCredentials,
+  CreateAppInput,
   EnvInput,
 } from "@/modules/coolify/application/ports";
 import {
   parseState,
   type CoolifyApp,
   type CoolifyEnv,
+  type CoolifyEnvironment,
   type CoolifyOverview,
   type CoolifyProject,
   type CoolifyResource,
@@ -131,6 +133,61 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
     return res.ok ? ok(mapApp(res.value)) : res;
   }
 
+  async listEnvironments(
+    cred: CoolifyCredentials,
+    projectUuid: string,
+  ): Promise<Result<CoolifyEnvironment[]>> {
+    const res = await this.getJson<RawEnvironment[]>(
+      cred,
+      `/projects/${projectUuid}/environments`,
+    );
+    if (!res.ok) return res;
+    return ok(
+      res.value.map((e) => ({
+        uuid: String(e.uuid ?? ""),
+        name: str(e.name) ?? "production",
+      })),
+    );
+  }
+
+  async createApp(
+    cred: CoolifyCredentials,
+    input: CreateAppInput,
+  ): Promise<Result<string>> {
+    const common: Record<string, unknown> = {
+      project_uuid: input.projectUuid,
+      server_uuid: input.serverUuid,
+      environment_name: input.environmentName,
+      environment_uuid: input.environmentUuid,
+      instant_deploy: input.instantDeploy,
+    };
+    if (input.name.trim()) common.name = input.name.trim();
+    if (input.domains.trim()) common.domains = input.domains.trim();
+    if (input.portsExposes.trim()) common.ports_exposes = input.portsExposes.trim();
+
+    const path =
+      input.source === "dockerfile"
+        ? "/applications/dockerfile"
+        : "/applications/public";
+    const body =
+      input.source === "dockerfile"
+        ? { ...common, dockerfile: input.dockerfile }
+        : {
+            ...common,
+            git_repository: input.gitRepository.trim(),
+            git_branch: input.gitBranch.trim(),
+            build_pack: input.buildPack,
+          };
+
+    const res = await this.send<{ uuid?: string; message?: string }>(cred, path, {
+      method: "POST",
+      body,
+    });
+    return res.ok
+      ? ok(res.value.message ?? `Aplicación creada${res.value.uuid ? ` (${res.value.uuid})` : ""}.`)
+      : res;
+  }
+
   async deploy(
     cred: CoolifyCredentials,
     uuid: string,
@@ -245,6 +302,10 @@ interface RawProject {
   uuid?: string;
   name?: string;
   description?: string | null;
+}
+interface RawEnvironment {
+  uuid?: string;
+  name?: string;
 }
 interface RawServer {
   uuid?: string;

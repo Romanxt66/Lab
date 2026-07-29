@@ -34,6 +34,7 @@ import {
 import type { AppAction } from "@/modules/coolify/application/ports";
 import { ConnectionPanel } from "./ConnectionPanel";
 import { AppDetailDialog } from "./AppDetailDialog";
+import { CreateAppDialog } from "./CreateAppDialog";
 import { STATE_DOT, STATE_TEXT } from "./status";
 
 export function CoolifyTool() {
@@ -98,6 +99,7 @@ function Dashboard({
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<CoolifyApp | null>(null);
+  const [creating, setCreating] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -135,6 +137,14 @@ function Dashboard({
           </a>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setCreating(true)}
+            disabled={loading || !overview}
+          >
+            <Rocket className="size-3.5" />
+            Nueva app
+          </Button>
           <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
             <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
             Actualizar
@@ -235,6 +245,15 @@ function Dashboard({
 
       {detail ? (
         <AppDetailDialog app={detail} onClose={() => setDetail(null)} />
+      ) : null}
+
+      {creating && overview ? (
+        <CreateAppDialog
+          projects={overview.projects}
+          servers={overview.servers}
+          onClose={() => setCreating(false)}
+          onCreated={refresh}
+        />
       ) : null}
     </div>
   );

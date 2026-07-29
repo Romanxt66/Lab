@@ -3,6 +3,7 @@ import type { CoolifyConfig } from "@/modules/coolify/domain/config";
 import type {
   CoolifyApp,
   CoolifyEnv,
+  CoolifyEnvironment,
   CoolifyOverview,
 } from "@/modules/coolify/domain/resource";
 
@@ -22,11 +23,38 @@ export interface EnvInput {
   isLiteral: boolean;
 }
 
+/** Input to create a new application (public Git repo or raw Dockerfile). */
+export interface CreateAppInput {
+  source: "public" | "dockerfile";
+  name: string;
+  projectUuid: string;
+  environmentName: string;
+  environmentUuid: string;
+  serverUuid: string;
+  domains: string;
+  portsExposes: string;
+  instantDeploy: boolean;
+  // source === "public"
+  gitRepository: string;
+  gitBranch: string;
+  buildPack: string;
+  // source === "dockerfile"
+  dockerfile: string;
+}
+
 /** Talks to the Coolify REST API. Adapters live in `infrastructure/`. */
 export interface CoolifyClientPort {
   /** Cheap call to validate the connection (GET /version). */
   ping(cred: CoolifyCredentials): Promise<Result<string>>;
   overview(cred: CoolifyCredentials): Promise<Result<CoolifyOverview>>;
+  listEnvironments(
+    cred: CoolifyCredentials,
+    projectUuid: string,
+  ): Promise<Result<CoolifyEnvironment[]>>;
+  createApp(
+    cred: CoolifyCredentials,
+    input: CreateAppInput,
+  ): Promise<Result<string>>;
   getApp(cred: CoolifyCredentials, uuid: string): Promise<Result<CoolifyApp>>;
   deploy(cred: CoolifyCredentials, uuid: string, force: boolean): Promise<Result<string>>;
   control(

@@ -31,6 +31,20 @@ export interface CoolifyProject {
   description: string | null;
 }
 
+export interface CoolifyEnvironment {
+  uuid: string;
+  name: string;
+}
+
+export type BuildPack = "nixpacks" | "static" | "dockerfile" | "dockercompose";
+
+export const BUILD_PACKS: { id: BuildPack; label: string }[] = [
+  { id: "nixpacks", label: "Nixpacks (auto)" },
+  { id: "static", label: "Estático" },
+  { id: "dockerfile", label: "Dockerfile" },
+  { id: "dockercompose", label: "Docker Compose" },
+];
+
 export interface CoolifyServer {
   uuid: string;
   name: string;
