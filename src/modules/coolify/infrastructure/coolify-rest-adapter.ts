@@ -6,6 +6,7 @@ import type {
   CoolifyClientPort,
   CoolifyCredentials,
   CreateAppInput,
+  CreateDatabaseInput,
   EnvInput,
   ResourceKind,
 } from "@/modules/coolify/application/ports";
@@ -365,6 +366,42 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
     if (!res.ok) return res;
     const v = res.value;
     return ok(typeof v === "string" ? v : v.logs ?? "");
+  }
+
+  async createDatabase(
+    cred: CoolifyCredentials,
+    input: CreateDatabaseInput,
+  ): Promise<Result<string>> {
+    const body: Record<string, unknown> = {
+      server_uuid: input.serverUuid,
+      project_uuid: input.projectUuid,
+      environment_name: input.environmentName,
+      environment_uuid: input.environmentUuid,
+      instant_deploy: input.instantDeploy,
+    };
+    if (input.name.trim()) body.name = input.name.trim();
+    if (input.image.trim()) body.image = input.image.trim();
+
+    const res = await this.send<{ uuid?: string; message?: string }>(
+      cred,
+      `/databases/${input.type}`,
+      { method: "POST", body },
+    );
+    return res.ok
+      ? ok(res.value.message ?? `Base de datos creada${res.value.uuid ? ` (${res.value.uuid})` : ""}.`)
+      : res;
+  }
+
+  async createProject(
+    cred: CoolifyCredentials,
+    input: { name: string; description: string },
+  ): Promise<Result<string>> {
+    const res = await this.send<{ uuid?: string; message?: string }>(
+      cred,
+      "/projects",
+      { method: "POST", body: { name: input.name, description: input.description } },
+    );
+    return res.ok ? ok(res.value.message ?? "Proyecto creado.") : res;
   }
 }
 

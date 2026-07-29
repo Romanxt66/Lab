@@ -18,6 +18,7 @@ import type {
   CoolifyConfigRepoPort,
   CoolifyCredentials,
   CreateAppInput,
+  CreateDatabaseInput,
   EnvInput,
   ResourceKind,
 } from "./ports";
@@ -198,5 +199,28 @@ export class CoolifyService {
     const c = await this.cred();
     if (!c.ok) return c;
     return this.client.resourceLogs(c.value, kind, uuid, lines);
+  }
+
+  async createDatabase(input: CreateDatabaseInput): Promise<Result<string>> {
+    if (!input.projectUuid) return err("Elige un proyecto.");
+    if (!input.environmentUuid) return err("Elige un entorno.");
+    if (!input.serverUuid) return err("Elige un servidor.");
+    if (!input.type) return err("Elige el tipo de base de datos.");
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.createDatabase(c.value, input);
+  }
+
+  async createProject(input: {
+    name: string;
+    description: string;
+  }): Promise<Result<string>> {
+    if (!input.name.trim()) return err("El nombre del proyecto es obligatorio.");
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.createProject(c.value, {
+      name: input.name.trim(),
+      description: input.description.trim(),
+    });
   }
 }

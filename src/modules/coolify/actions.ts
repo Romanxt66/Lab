@@ -17,6 +17,7 @@ import type {
   AppAction,
   AppConfigPatch,
   CreateAppInput,
+  CreateDatabaseInput,
   EnvInput,
   ResourceKind,
 } from "@/modules/coolify/application/ports";
@@ -145,4 +146,17 @@ export async function coolifyResourceLogsAction(
   lines = 200,
 ): Promise<Result<string>> {
   return getCoolifyService().resourceLogs(kind, uuid, lines);
+}
+
+export async function createCoolifyDatabaseAction(
+  input: CreateDatabaseInput,
+): Promise<Result<string>> {
+  return getCoolifyService().createDatabase(input);
+}
+
+export async function createCoolifyProjectAction(input: {
+  name: string;
+  description: string;
+}): Promise<Result<string>> {
+  return getCoolifyService().createProject(input);
 }

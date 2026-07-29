@@ -42,6 +42,18 @@ export interface CoolifyEnvironment {
   name: string;
 }
 
+/** Database engines Coolify can create (path segment = id). */
+export const DATABASE_TYPES: { id: string; label: string }[] = [
+  { id: "postgresql", label: "PostgreSQL" },
+  { id: "mysql", label: "MySQL" },
+  { id: "mariadb", label: "MariaDB" },
+  { id: "mongodb", label: "MongoDB" },
+  { id: "redis", label: "Redis" },
+  { id: "keydb", label: "KeyDB" },
+  { id: "dragonfly", label: "Dragonfly" },
+  { id: "clickhouse", label: "ClickHouse" },
+];
+
 export type BuildPack = "nixpacks" | "static" | "dockerfile" | "dockercompose";
 
 export const BUILD_PACKS: { id: BuildPack; label: string }[] = [

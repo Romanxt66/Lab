@@ -16,6 +16,7 @@ import {
   Boxes,
   GitBranch,
   X,
+  FolderPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,8 @@ import type {
 import { ConnectionPanel } from "./ConnectionPanel";
 import { AppDetailDialog } from "./AppDetailDialog";
 import { CreateAppDialog } from "./CreateAppDialog";
+import { CreateDatabaseDialog } from "./CreateDatabaseDialog";
+import { CreateProjectDialog } from "./CreateProjectDialog";
 import { STATE_DOT, STATE_TEXT } from "./status";
 
 export function CoolifyTool() {
@@ -110,6 +113,8 @@ function Dashboard({
   const [error, setError] = React.useState<string | null>(null);
   const [detail, setDetail] = React.useState<CoolifyApp | null>(null);
   const [creating, setCreating] = React.useState(false);
+  const [creatingDb, setCreatingDb] = React.useState(false);
+  const [creatingProject, setCreatingProject] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -154,6 +159,24 @@ function Dashboard({
           >
             <Rocket className="size-3.5" />
             Nueva app
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCreatingDb(true)}
+            disabled={loading || !overview}
+          >
+            <Database className="size-3.5" />
+            Nueva BD
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setCreatingProject(true)}
+            disabled={loading}
+          >
+            <FolderPlus className="size-3.5" />
+            Proyecto
           </Button>
           <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
             <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
@@ -268,6 +291,22 @@ function Dashboard({
           projects={overview.projects}
           servers={overview.servers}
           onClose={() => setCreating(false)}
+          onCreated={refresh}
+        />
+      ) : null}
+
+      {creatingDb && overview ? (
+        <CreateDatabaseDialog
+          projects={overview.projects}
+          servers={overview.servers}
+          onClose={() => setCreatingDb(false)}
+          onCreated={refresh}
+        />
+      ) : null}
+
+      {creatingProject ? (
+        <CreateProjectDialog
+          onClose={() => setCreatingProject(false)}
           onCreated={refresh}
         />
       ) : null}

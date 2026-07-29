@@ -19,6 +19,19 @@ export type AppAction = "start" | "stop" | "restart";
 /** API path segment for a controllable resource type. */
 export type ResourceKind = "databases" | "services";
 
+/** Input to create a new database (credentials are auto-generated if omitted). */
+export interface CreateDatabaseInput {
+  /** Engine id, e.g. "postgresql" (see DATABASE_TYPES). */
+  type: string;
+  name: string;
+  projectUuid: string;
+  environmentName: string;
+  environmentUuid: string;
+  serverUuid: string;
+  image: string;
+  instantDeploy: boolean;
+}
+
 /** Editable application configuration (subset of Coolify's PATCH fields). */
 export interface AppConfigPatch {
   name: string;
@@ -121,6 +134,14 @@ export interface CoolifyClientPort {
     kind: ResourceKind,
     uuid: string,
     lines: number,
+  ): Promise<Result<string>>;
+  createDatabase(
+    cred: CoolifyCredentials,
+    input: CreateDatabaseInput,
+  ): Promise<Result<string>>;
+  createProject(
+    cred: CoolifyCredentials,
+    input: { name: string; description: string },
   ): Promise<Result<string>>;
 }
 
