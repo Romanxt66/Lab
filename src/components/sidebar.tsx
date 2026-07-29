@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import { CATEGORIES, TOOLS, type ToolCategory } from "@/modules/registry";
 
 const CATEGORY_ORDER: ToolCategory[] = [
-  "dev-utils",
   "finance",
   "inventory",
   "github",

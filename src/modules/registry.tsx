@@ -2,16 +2,9 @@ import type { ComponentType } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Mail,
-  Wrench,
   Globe,
   Clock,
-  Braces,
-  Binary,
-  KeyRound,
-  Fingerprint,
-  CalendarClock,
   CalendarDays,
-  Regex,
   Send,
   Bell,
   Database,
@@ -19,12 +12,6 @@ import {
   Boxes,
   FolderGit2,
 } from "lucide-react";
-import { JsonFormatter } from "@/modules/dev-utils/ui/JsonFormatter";
-import { Base64Tool } from "@/modules/dev-utils/ui/Base64Tool";
-import { JwtDecoder } from "@/modules/dev-utils/ui/JwtDecoder";
-import { UuidHash } from "@/modules/dev-utils/ui/UuidHash";
-import { TimestampTool } from "@/modules/dev-utils/ui/TimestampTool";
-import { RegexTester } from "@/modules/dev-utils/ui/RegexTester";
 import { EmailAutomation } from "@/modules/email/ui/EmailAutomation";
 import { ScraperTool } from "@/modules/scraper/ui/ScraperTool";
 import { JobScheduler } from "@/modules/scheduler/ui/JobScheduler";
@@ -45,7 +32,6 @@ import { GitHubTool } from "@/modules/github/ui/GitHubTool";
 
 export type ToolCategory =
   | "email"
-  | "dev-utils"
   | "scraper"
   | "scheduler"
   | "calendar"
@@ -62,7 +48,6 @@ export interface CategoryMeta {
 }
 
 export const CATEGORIES: Record<ToolCategory, CategoryMeta> = {
-  "dev-utils": { id: "dev-utils", label: "Utilidades de dev", icon: Wrench },
   finance: { id: "finance", label: "Finanzas", icon: Wallet },
   inventory: { id: "inventory", label: "Inventario", icon: Boxes },
   github: { id: "github", label: "GitHub", icon: FolderGit2 },
@@ -94,60 +79,6 @@ export interface ToolMeta {
  * Order here is the order shown within each category on the dashboard.
  */
 export const TOOLS: ToolMeta[] = [
-  {
-    slug: "json-formatter",
-    name: "JSON Formatter",
-    description: "Formatea, valida y minifica JSON.",
-    category: "dev-utils",
-    icon: Braces,
-    status: "ready",
-    Component: JsonFormatter,
-  },
-  {
-    slug: "base64",
-    name: "Base64",
-    description: "Codifica y decodifica texto en Base64 (UTF-8).",
-    category: "dev-utils",
-    icon: Binary,
-    status: "ready",
-    Component: Base64Tool,
-  },
-  {
-    slug: "jwt-decoder",
-    name: "JWT Decoder",
-    description: "Inspecciona el header y payload de un JWT.",
-    category: "dev-utils",
-    icon: KeyRound,
-    status: "ready",
-    Component: JwtDecoder,
-  },
-  {
-    slug: "uuid-hash",
-    name: "UUID & Hash",
-    description: "Genera UUIDs v4 y calcula hashes SHA.",
-    category: "dev-utils",
-    icon: Fingerprint,
-    status: "ready",
-    Component: UuidHash,
-  },
-  {
-    slug: "timestamp",
-    name: "Timestamp",
-    description: "Convierte entre unix, ISO y fechas legibles.",
-    category: "dev-utils",
-    icon: CalendarClock,
-    status: "ready",
-    Component: TimestampTool,
-  },
-  {
-    slug: "regex-tester",
-    name: "Regex Tester",
-    description: "Prueba expresiones regulares en vivo.",
-    category: "dev-utils",
-    icon: Regex,
-    status: "ready",
-    Component: RegexTester,
-  },
   {
     slug: "email-automation",
     name: "Automatización de correos",
