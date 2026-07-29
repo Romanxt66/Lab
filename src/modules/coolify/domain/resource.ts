@@ -74,6 +74,43 @@ export interface CoolifyOverview {
   services: CoolifyResource[];
 }
 
+export type DeployStatus =
+  | "queued"
+  | "in_progress"
+  | "finished"
+  | "failed"
+  | "cancelled";
+
+export interface CoolifyDeployment {
+  uuid: string;
+  applicationName: string;
+  serverName: string | null;
+  status: DeployStatus;
+  rawStatus: string;
+  commit: string | null;
+  commitMessage: string | null;
+  createdAt: string | null;
+}
+
+export function parseDeployStatus(raw: string | null | undefined): DeployStatus {
+  const s = (raw ?? "").toLowerCase();
+  if (s.includes("progress") || s.includes("running")) return "in_progress";
+  if (s.includes("queue")) return "queued";
+  if (s.includes("fail") || s.includes("error")) return "failed";
+  if (s.includes("cancel")) return "cancelled";
+  if (s.includes("finish") || s.includes("success") || s.includes("done"))
+    return "finished";
+  return "queued";
+}
+
+export const DEPLOY_STATUS_LABELS: Record<DeployStatus, string> = {
+  queued: "En cola",
+  in_progress: "En curso",
+  finished: "Completado",
+  failed: "Fallido",
+  cancelled: "Cancelado",
+};
+
 export interface CoolifyEnv {
   uuid: string;
   key: string;

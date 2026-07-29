@@ -10,7 +10,9 @@ import type {
 } from "@/modules/coolify/application/ports";
 import {
   parseState,
+  parseDeployStatus,
   type CoolifyApp,
+  type CoolifyDeployment,
   type CoolifyEnv,
   type CoolifyEnvironment,
   type CoolifyOverview,
@@ -307,6 +309,30 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
     if (typeof v === "string") return ok(v);
     return ok(v.logs ?? "");
   }
+
+  async listDeployments(
+    cred: CoolifyCredentials,
+  ): Promise<Result<CoolifyDeployment[]>> {
+    const res = await this.getJson<RawDeployment[] | { deployments?: RawDeployment[] }>(
+      cred,
+      "/deployments",
+    );
+    if (!res.ok) return res;
+    const list = Array.isArray(res.value) ? res.value : res.value.deployments ?? [];
+    return ok(list.map(mapDeployment));
+  }
+
+  async cancelDeployment(
+    cred: CoolifyCredentials,
+    uuid: string,
+  ): Promise<Result<string>> {
+    const res = await this.send<{ message?: string }>(
+      cred,
+      `/deployments/${uuid}/cancel`,
+      { method: "POST" },
+    );
+    return res.ok ? ok(res.value.message ?? "Despliegue cancelado.") : res;
+  }
 }
 
 // --- Raw shapes (only the fields we read; all optional/defensive) ----------
@@ -419,6 +445,31 @@ function mapServer(s: RawServer): CoolifyServer {
     name: str(s.name) ?? "(sin nombre)",
     ip: str(s.ip ?? null),
     reachable: s.settings?.is_reachable ?? s.is_reachable ?? null,
+  };
+}
+
+interface RawDeployment {
+  deployment_uuid?: string;
+  uuid?: string;
+  id?: number | string;
+  application_name?: string;
+  server_name?: string | null;
+  status?: string;
+  commit?: string | null;
+  commit_message?: string | null;
+  created_at?: string | null;
+}
+
+function mapDeployment(d: RawDeployment): CoolifyDeployment {
+  return {
+    uuid: String(d.deployment_uuid ?? d.uuid ?? d.id ?? ""),
+    applicationName: str(d.application_name ?? null) ?? "(app)",
+    serverName: str(d.server_name ?? null),
+    status: parseDeployStatus(d.status),
+    rawStatus: d.status ?? "",
+    commit: str(d.commit ?? null),
+    commitMessage: str(d.commit_message ?? null),
+    createdAt: str(d.created_at ?? null),
   };
 }
 

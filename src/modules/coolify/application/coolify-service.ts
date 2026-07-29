@@ -6,6 +6,7 @@ import {
 } from "@/modules/coolify/domain/config";
 import type {
   CoolifyApp,
+  CoolifyDeployment,
   CoolifyEnv,
   CoolifyEnvironment,
   CoolifyOverview,
@@ -164,5 +165,17 @@ export class CoolifyService {
     const c = await this.cred();
     if (!c.ok) return c;
     return this.client.logs(c.value, uuid, lines);
+  }
+
+  async listDeployments(): Promise<Result<CoolifyDeployment[]>> {
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.listDeployments(c.value);
+  }
+
+  async cancelDeployment(uuid: string): Promise<Result<string>> {
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.cancelDeployment(c.value, uuid);
   }
 }

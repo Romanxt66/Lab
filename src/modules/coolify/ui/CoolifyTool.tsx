@@ -23,11 +23,15 @@ import {
   coolifyOverviewAction,
   deployCoolifyAction,
   controlCoolifyAction,
+  coolifyDeploymentsAction,
+  cancelCoolifyDeploymentAction,
 } from "@/modules/coolify/actions";
 import type { CoolifyConfigDTO } from "@/modules/coolify/domain/config";
 import {
   STATE_LABELS,
+  DEPLOY_STATUS_LABELS,
   type CoolifyApp,
+  type CoolifyDeployment,
   type CoolifyOverview,
   type CoolifyResource,
 } from "@/modules/coolify/domain/resource";
@@ -160,6 +164,8 @@ function Dashboard({
         <p className="rounded-md bg-danger/10 p-3 text-sm text-danger">{error}</p>
       ) : null}
 
+      <DeploymentsSection />
+
       {loading && !overview ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" />
@@ -257,6 +263,106 @@ function Dashboard({
       ) : null}
     </div>
   );
+}
+
+const DEPLOY_DOT: Record<string, string> = {
+  in_progress: "bg-[oklch(0.7_0.14_75)] animate-pulse",
+  queued: "bg-muted-foreground/50",
+  finished: "bg-success",
+  failed: "bg-danger",
+  cancelled: "bg-muted-foreground/40",
+};
+
+function DeploymentsSection() {
+  const [deps, setDeps] = React.useState<CoolifyDeployment[]>([]);
+  const [loaded, setLoaded] = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    const res = await coolifyDeploymentsAction();
+    if (res.ok) setDeps(res.value);
+    setLoaded(true);
+  }, []);
+
+  React.useEffect(() => {
+    void (async () => {
+      await load();
+    })();
+    // Poll so in-progress deployments update live.
+    const id = setInterval(() => void load(), 6000);
+    return () => clearInterval(id);
+  }, [load]);
+
+  // Keep the dashboard clean when there's nothing to show.
+  if (!loaded || deps.length === 0) return null;
+
+  const recent = deps.slice(0, 6);
+
+  return (
+    <section>
+      <SectionTitle count={deps.length}>Despliegues</SectionTitle>
+      <div className="glass divide-y divide-border/60 overflow-hidden rounded-lg border border-border/60">
+        {recent.map((d) => {
+          const active = d.status === "in_progress" || d.status === "queued";
+          return (
+            <div key={d.uuid} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+              <span
+                className={cn(
+                  "size-2 shrink-0 rounded-full",
+                  DEPLOY_DOT[d.status] ?? "bg-muted-foreground/40",
+                )}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{d.applicationName}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {DEPLOY_STATUS_LABELS[d.status]}
+                  {d.commitMessage ? ` · ${d.commitMessage}` : d.commit ? ` · ${d.commit.slice(0, 7)}` : ""}
+                  {d.createdAt ? ` · ${formatWhen(d.createdAt)}` : ""}
+                </p>
+              </div>
+              {active ? <CancelDeployButton uuid={d.uuid} onDone={load} /> : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function CancelDeployButton({
+  uuid,
+  onDone,
+}: {
+  uuid: string;
+  onDone: () => void | Promise<void>;
+}) {
+  const [busy, setBusy] = React.useState(false);
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        await cancelCoolifyDeploymentAction(uuid);
+        setBusy(false);
+        await onDone();
+      }}
+    >
+      {busy ? <Loader2 className="size-3.5 animate-spin" /> : null}
+      Cancelar
+    </Button>
+  );
+}
+
+function formatWhen(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("es", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function AppCard({

@@ -8,6 +8,7 @@ import {
 } from "@/modules/coolify/domain/config";
 import type {
   CoolifyApp,
+  CoolifyDeployment,
   CoolifyEnv,
   CoolifyEnvironment,
   CoolifyOverview,
@@ -115,4 +116,16 @@ export async function coolifyLogsAction(
   lines = 200,
 ): Promise<Result<string>> {
   return getCoolifyService().logs(uuid, lines);
+}
+
+export async function coolifyDeploymentsAction(): Promise<
+  Result<CoolifyDeployment[]>
+> {
+  return getCoolifyService().listDeployments();
+}
+
+export async function cancelCoolifyDeploymentAction(
+  uuid: string,
+): Promise<Result<string>> {
+  return getCoolifyService().cancelDeployment(uuid);
 }

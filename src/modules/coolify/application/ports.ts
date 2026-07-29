@@ -2,6 +2,7 @@ import type { Result } from "@/shared/kernel/result";
 import type { CoolifyConfig } from "@/modules/coolify/domain/config";
 import type {
   CoolifyApp,
+  CoolifyDeployment,
   CoolifyEnv,
   CoolifyEnvironment,
   CoolifyOverview,
@@ -98,6 +99,13 @@ export interface CoolifyClientPort {
     envUuid: string,
   ): Promise<Result<string>>;
   logs(cred: CoolifyCredentials, uuid: string, lines: number): Promise<Result<string>>;
+  listDeployments(
+    cred: CoolifyCredentials,
+  ): Promise<Result<CoolifyDeployment[]>>;
+  cancelDeployment(
+    cred: CoolifyCredentials,
+    uuid: string,
+  ): Promise<Result<string>>;
 }
 
 /** Persists the single Coolify connection config. */
