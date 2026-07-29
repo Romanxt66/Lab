@@ -19,6 +19,7 @@ import type {
   CoolifyCredentials,
   CreateAppInput,
   CreateDatabaseInput,
+  DeletableKind,
   EnvInput,
   ResourceKind,
 } from "./ports";
@@ -222,5 +223,27 @@ export class CoolifyService {
       name: input.name.trim(),
       description: input.description.trim(),
     });
+  }
+
+  async updateProject(
+    uuid: string,
+    input: { name: string; description: string },
+  ): Promise<Result<string>> {
+    if (!input.name.trim()) return err("El nombre del proyecto es obligatorio.");
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.updateProject(c.value, uuid, {
+      name: input.name.trim(),
+      description: input.description.trim(),
+    });
+  }
+
+  async deleteResource(
+    kind: DeletableKind,
+    uuid: string,
+  ): Promise<Result<string>> {
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.deleteResource(c.value, kind, uuid);
   }
 }

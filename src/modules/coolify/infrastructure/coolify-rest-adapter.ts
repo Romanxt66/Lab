@@ -7,6 +7,7 @@ import type {
   CoolifyCredentials,
   CreateAppInput,
   CreateDatabaseInput,
+  DeletableKind,
   EnvInput,
   ResourceKind,
 } from "@/modules/coolify/application/ports";
@@ -402,6 +403,31 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
       { method: "POST", body: { name: input.name, description: input.description } },
     );
     return res.ok ? ok(res.value.message ?? "Proyecto creado.") : res;
+  }
+
+  async updateProject(
+    cred: CoolifyCredentials,
+    uuid: string,
+    input: { name: string; description: string },
+  ): Promise<Result<string>> {
+    const res = await this.send<{ message?: string }>(cred, `/projects/${uuid}`, {
+      method: "PATCH",
+      body: { name: input.name, description: input.description },
+    });
+    return res.ok ? ok(res.value.message ?? "Proyecto actualizado.") : res;
+  }
+
+  async deleteResource(
+    cred: CoolifyCredentials,
+    kind: DeletableKind,
+    uuid: string,
+  ): Promise<Result<string>> {
+    const res = await this.send<{ message?: string }>(
+      cred,
+      `/${kind}/${uuid}`,
+      { method: "DELETE" },
+    );
+    return res.ok ? ok(res.value.message ?? "Eliminado.") : res;
   }
 }
 

@@ -18,6 +18,7 @@ import type {
   AppConfigPatch,
   CreateAppInput,
   CreateDatabaseInput,
+  DeletableKind,
   EnvInput,
   ResourceKind,
 } from "@/modules/coolify/application/ports";
@@ -159,4 +160,18 @@ export async function createCoolifyProjectAction(input: {
   description: string;
 }): Promise<Result<string>> {
   return getCoolifyService().createProject(input);
+}
+
+export async function updateCoolifyProjectAction(
+  uuid: string,
+  input: { name: string; description: string },
+): Promise<Result<string>> {
+  return getCoolifyService().updateProject(uuid, input);
+}
+
+export async function deleteCoolifyResourceAction(
+  kind: DeletableKind,
+  uuid: string,
+): Promise<Result<string>> {
+  return getCoolifyService().deleteResource(kind, uuid);
 }

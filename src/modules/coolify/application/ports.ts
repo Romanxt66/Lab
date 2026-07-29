@@ -19,6 +19,13 @@ export type AppAction = "start" | "stop" | "restart";
 /** API path segment for a controllable resource type. */
 export type ResourceKind = "databases" | "services";
 
+/** API path segment for a deletable resource type. */
+export type DeletableKind =
+  | "applications"
+  | "databases"
+  | "services"
+  | "projects";
+
 /** Input to create a new database (credentials are auto-generated if omitted). */
 export interface CreateDatabaseInput {
   /** Engine id, e.g. "postgresql" (see DATABASE_TYPES). */
@@ -142,6 +149,16 @@ export interface CoolifyClientPort {
   createProject(
     cred: CoolifyCredentials,
     input: { name: string; description: string },
+  ): Promise<Result<string>>;
+  updateProject(
+    cred: CoolifyCredentials,
+    uuid: string,
+    input: { name: string; description: string },
+  ): Promise<Result<string>>;
+  deleteResource(
+    cred: CoolifyCredentials,
+    kind: DeletableKind,
+    uuid: string,
   ): Promise<Result<string>>;
 }
 

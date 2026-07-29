@@ -17,8 +17,12 @@ import {
   GitBranch,
   X,
   FolderPlus,
+  Trash2,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
   getCoolifyConfigAction,
@@ -29,6 +33,8 @@ import {
   cancelCoolifyDeploymentAction,
   controlCoolifyResourceAction,
   coolifyResourceLogsAction,
+  deleteCoolifyResourceAction,
+  updateCoolifyProjectAction,
 } from "@/modules/coolify/actions";
 import type { CoolifyConfigDTO } from "@/modules/coolify/domain/config";
 import {
@@ -37,6 +43,7 @@ import {
   type CoolifyApp,
   type CoolifyDeployment,
   type CoolifyOverview,
+  type CoolifyProject,
   type CoolifyResource,
 } from "@/modules/coolify/domain/resource";
 import type {
@@ -238,6 +245,11 @@ function Dashboard({
               onRefresh={refresh}
             />
           </div>
+
+          {/* Projects */}
+          {overview.projects.length > 0 ? (
+            <ProjectsSection projects={overview.projects} onRefresh={refresh} />
+          ) : null}
 
           {/* Servers */}
           {overview.servers.length > 0 ? (
@@ -539,6 +551,162 @@ function AppCard({
           <ScrollText className="size-3.5" />
           Logs
         </Button>
+        <DeleteBtn
+          label={`la aplicación "${app.name}"`}
+          onDelete={() => deleteCoolifyResourceAction("applications", app.uuid)}
+          onDone={onChanged}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Trash button with confirm + inline busy state, for destructive deletes. */
+function DeleteBtn({
+  label,
+  onDelete,
+  onDone,
+}: {
+  label: string;
+  onDelete: () => Promise<{ ok: true; value: string } | { ok: false; error: string }>;
+  onDone: () => void | Promise<void>;
+}) {
+  const [busy, setBusy] = React.useState(false);
+  return (
+    <button
+      title="Eliminar"
+      disabled={busy}
+      onClick={async () => {
+        if (!confirm(`¿Eliminar ${label}? Esta acción no se puede deshacer.`)) return;
+        setBusy(true);
+        const res = await onDelete();
+        setBusy(false);
+        if (res.ok) await onDone();
+        else alert(res.error);
+      }}
+      className="rounded p-1.5 text-muted-foreground hover:bg-danger/10 hover:text-danger"
+    >
+      {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+    </button>
+  );
+}
+
+function ProjectsSection({
+  projects,
+  onRefresh,
+}: {
+  projects: CoolifyProject[];
+  onRefresh: () => void | Promise<void>;
+}) {
+  const [editing, setEditing] = React.useState<CoolifyProject | null>(null);
+  return (
+    <section>
+      <SectionTitle count={projects.length}>Proyectos</SectionTitle>
+      <div className="glass divide-y divide-border/60 overflow-hidden rounded-lg border border-border/60">
+        {projects.map((p) => (
+          <div key={p.uuid} className="group flex items-center gap-3 px-4 py-2.5 text-sm">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">{p.name}</p>
+              {p.description ? (
+                <p className="truncate text-xs text-muted-foreground">
+                  {p.description}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <IconBtn title="Editar" onClick={() => setEditing(p)}>
+                <Pencil className="size-3.5" />
+              </IconBtn>
+              <DeleteBtn
+                label={`el proyecto "${p.name}" (y todo su contenido)`}
+                onDelete={() => deleteCoolifyResourceAction("projects", p.uuid)}
+                onDone={onRefresh}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+      {editing ? (
+        <EditProjectDialog
+          project={editing}
+          onClose={() => setEditing(null)}
+          onSaved={async () => {
+            setEditing(null);
+            await onRefresh();
+          }}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+function EditProjectDialog({
+  project,
+  onClose,
+  onSaved,
+}: {
+  project: CoolifyProject;
+  onClose: () => void;
+  onSaved: () => void | Promise<void>;
+}) {
+  const [name, setName] = React.useState(project.name);
+  const [description, setDescription] = React.useState(project.description ?? "");
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    const res = await updateCoolifyProjectAction(project.uuid, { name, description });
+    setSaving(false);
+    if (res.ok) await onSaved();
+    else setError(res.error);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="glass w-full max-w-sm rounded-xl border border-border/60 p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-medium">Editar proyecto</h3>
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-muted-foreground hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        <div className="space-y-3">
+          <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          <Input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Descripción"
+          />
+          {error ? (
+            <p className="rounded-md bg-danger/10 p-2 text-sm text-danger">{error}</p>
+          ) : null}
+          <div className="flex items-center gap-2">
+            <Button onClick={save} disabled={saving || !name.trim()}>
+              {saving ? <Loader2 className="animate-spin" /> : <Check className="size-3.5" />}
+              Guardar
+            </Button>
+            <Button variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -633,6 +801,11 @@ function ResourceRow({
         <IconBtn title="Logs" onClick={onLogs}>
           <ScrollText className="size-3.5" />
         </IconBtn>
+        <DeleteBtn
+          label={`"${resource.name}"`}
+          onDelete={() => deleteCoolifyResourceAction(kind, resource.uuid)}
+          onDone={onChanged}
+        />
       </div>
     </div>
   );
