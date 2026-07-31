@@ -207,6 +207,82 @@ function databaseUrl(db: Exclude<DatabaseType, null>): string {
 }
 
 /**
+ * Standalone docker-compose for a single database engine, using Coolify's magic
+ * environment variables (SERVICE_*) so it auto-generates the credentials — the
+ * same way Coolify's one-click databases work. Use it to create a compose-based
+ * service in Coolify.
+ */
+export function databaseComposeTemplate(type: string): string {
+  switch (type) {
+    case "postgresql":
+      return `services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: \${SERVICE_USER_POSTGRES:-app}
+      POSTGRES_PASSWORD: \${SERVICE_PASSWORD_POSTGRES}
+      POSTGRES_DB: \${POSTGRES_DB:-app}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  pg-data:
+`;
+    case "mysql":
+    case "mariadb":
+      return `services:
+  ${type === "mariadb" ? "mariadb" : "mysql"}:
+    image: ${type === "mariadb" ? "mariadb:11" : "mysql:8"}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: \${SERVICE_PASSWORD_MYSQLROOT}
+      MYSQL_DATABASE: \${MYSQL_DATABASE:-app}
+      MYSQL_USER: \${SERVICE_USER_MYSQL:-app}
+      MYSQL_PASSWORD: \${SERVICE_PASSWORD_MYSQL}
+    volumes:
+      - db-data:/var/lib/mysql
+volumes:
+  db-data:
+`;
+    case "mongodb":
+      return `services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: \${SERVICE_USER_MONGO:-app}
+      MONGO_INITDB_ROOT_PASSWORD: \${SERVICE_PASSWORD_MONGO}
+    volumes:
+      - mongo-data:/data/db
+volumes:
+  mongo-data:
+`;
+    case "redis":
+      return `services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "\${SERVICE_PASSWORD_REDIS}"]
+    volumes:
+      - redis-data:/data
+volumes:
+  redis-data:
+`;
+    default:
+      return `services:
+  app:
+    image: nginx:alpine
+    restart: unless-stopped
+`;
+  }
+}
+
+/**
  * Generate a docker-compose that runs the app plus its database, when one was
  * detected. Returns null if no database is needed (a plain Dockerfile suffices).
  */

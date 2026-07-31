@@ -26,6 +26,17 @@ export type DeletableKind =
   | "services"
   | "projects";
 
+/** Input to create a service from a raw docker-compose. */
+export interface CreateServiceInput {
+  name: string;
+  projectUuid: string;
+  environmentName: string;
+  environmentUuid: string;
+  serverUuid: string;
+  dockerCompose: string;
+  instantDeploy: boolean;
+}
+
 /** Input to create a new database (credentials are auto-generated if omitted). */
 export interface CreateDatabaseInput {
   /** Engine id, e.g. "postgresql" (see DATABASE_TYPES). */
@@ -149,6 +160,10 @@ export interface CoolifyClientPort {
   createProject(
     cred: CoolifyCredentials,
     input: { name: string; description: string },
+  ): Promise<Result<string>>;
+  createService(
+    cred: CoolifyCredentials,
+    input: CreateServiceInput,
   ): Promise<Result<string>>;
   updateProject(
     cred: CoolifyCredentials,

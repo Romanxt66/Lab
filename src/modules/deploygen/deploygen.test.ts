@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { detectStack, type RepoFiles } from "./domain/detect";
-import { generateDockerfile, generateCompose } from "./domain/generate";
+import {
+  generateDockerfile,
+  generateCompose,
+  databaseComposeTemplate,
+} from "./domain/generate";
 
 function repo(
   paths: string[],
@@ -169,5 +173,19 @@ describe("generateCompose", () => {
     expect(compose).toContain("postgres:16-alpine");
     expect(compose).toContain("DATABASE_URL: postgresql://app:app@db:5432/app");
     expect(compose).toContain("db-data:");
+  });
+});
+
+describe("databaseComposeTemplate", () => {
+  it("uses Coolify magic vars for the Postgres password", () => {
+    const c = databaseComposeTemplate("postgresql");
+    expect(c).toContain("postgres:16-alpine");
+    expect(c).toContain("${SERVICE_PASSWORD_POSTGRES}");
+    expect(c).toContain("volumes:");
+  });
+  it("covers mysql/mongo/redis", () => {
+    expect(databaseComposeTemplate("mysql")).toContain("mysql:8");
+    expect(databaseComposeTemplate("mongodb")).toContain("mongo:7");
+    expect(databaseComposeTemplate("redis")).toContain("redis:7-alpine");
   });
 });

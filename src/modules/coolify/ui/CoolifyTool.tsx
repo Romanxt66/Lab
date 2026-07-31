@@ -55,6 +55,7 @@ import { ConnectionPanel } from "./ConnectionPanel";
 import { AppDetailDialog } from "./AppDetailDialog";
 import { CreateAppDialog } from "./CreateAppDialog";
 import { CreateDatabaseDialog } from "./CreateDatabaseDialog";
+import { CreateServiceDialog } from "./CreateServiceDialog";
 import { CreateProjectDialog } from "./CreateProjectDialog";
 import { AutoDeployDialog } from "./AutoDeployDialog";
 import { STATE_DOT, STATE_TEXT } from "./status";
@@ -123,6 +124,7 @@ function Dashboard({
   const [detail, setDetail] = React.useState<CoolifyApp | null>(null);
   const [creating, setCreating] = React.useState(false);
   const [creatingDb, setCreatingDb] = React.useState(false);
+  const [creatingService, setCreatingService] = React.useState(false);
   const [creatingProject, setCreatingProject] = React.useState(false);
   const [autoDeploy, setAutoDeploy] = React.useState(false);
 
@@ -188,6 +190,16 @@ function Dashboard({
           >
             <Database className="size-3.5" />
             Nueva BD
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCreatingService(true)}
+            disabled={loading || !overview}
+            title="Crear un servicio desde un docker-compose"
+          >
+            <Boxes className="size-3.5" />
+            Compose
           </Button>
           <Button
             size="sm"
@@ -325,6 +337,15 @@ function Dashboard({
           projects={overview.projects}
           servers={overview.servers}
           onClose={() => setCreatingDb(false)}
+          onCreated={refresh}
+        />
+      ) : null}
+
+      {creatingService && overview ? (
+        <CreateServiceDialog
+          projects={overview.projects}
+          servers={overview.servers}
+          onClose={() => setCreatingService(false)}
           onCreated={refresh}
         />
       ) : null}

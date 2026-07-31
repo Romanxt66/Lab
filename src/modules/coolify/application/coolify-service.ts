@@ -19,6 +19,7 @@ import type {
   CoolifyCredentials,
   CreateAppInput,
   CreateDatabaseInput,
+  CreateServiceInput,
   DeletableKind,
   EnvInput,
   ResourceKind,
@@ -210,6 +211,16 @@ export class CoolifyService {
     const c = await this.cred();
     if (!c.ok) return c;
     return this.client.createDatabase(c.value, input);
+  }
+
+  async createService(input: CreateServiceInput): Promise<Result<string>> {
+    if (!input.projectUuid) return err("Elige un proyecto.");
+    if (!input.environmentUuid) return err("Elige un entorno.");
+    if (!input.serverUuid) return err("Elige un servidor.");
+    if (!input.dockerCompose.trim()) return err("Pega el docker-compose.");
+    const c = await this.cred();
+    if (!c.ok) return c;
+    return this.client.createService(c.value, input);
   }
 
   async createProject(input: {

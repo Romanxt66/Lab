@@ -7,6 +7,7 @@ import type {
   CoolifyCredentials,
   CreateAppInput,
   CreateDatabaseInput,
+  CreateServiceInput,
   DeletableKind,
   EnvInput,
   ResourceKind,
@@ -403,6 +404,30 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
       { method: "POST", body: { name: input.name, description: input.description } },
     );
     return res.ok ? ok(res.value.message ?? "Proyecto creado.") : res;
+  }
+
+  async createService(
+    cred: CoolifyCredentials,
+    input: CreateServiceInput,
+  ): Promise<Result<string>> {
+    const body: Record<string, unknown> = {
+      project_uuid: input.projectUuid,
+      server_uuid: input.serverUuid,
+      environment_name: input.environmentName,
+      environment_uuid: input.environmentUuid,
+      docker_compose_raw: input.dockerCompose,
+      instant_deploy: input.instantDeploy,
+    };
+    if (input.name.trim()) body.name = input.name.trim();
+
+    const res = await this.send<{ uuid?: string; message?: string }>(
+      cred,
+      "/services",
+      { method: "POST", body },
+    );
+    return res.ok
+      ? ok(res.value.message ?? `Servicio creado${res.value.uuid ? ` (${res.value.uuid})` : ""}.`)
+      : res;
   }
 
   async updateProject(
