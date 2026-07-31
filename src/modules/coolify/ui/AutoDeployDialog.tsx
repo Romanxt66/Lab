@@ -11,6 +11,7 @@ import {
   Database,
   Server,
   Package,
+  Boxes,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ import type { AnalyzeResult } from "@/modules/deploygen/application/deploygen-se
 import {
   coolifyEnvironmentsAction,
   createCoolifyAppAction,
+  createCoolifyServiceAction,
 } from "@/modules/coolify/actions";
 import {
   BUILD_PACKS,
@@ -45,6 +47,7 @@ export function AutoDeployDialog({
 }) {
   const [repoUrl, setRepoUrl] = React.useState("");
   const [branch, setBranch] = React.useState("");
+  const [baseDir, setBaseDir] = React.useState("");
   const [analyzing, setAnalyzing] = React.useState(false);
   const [result, setResult] = React.useState<AnalyzeResult | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -59,7 +62,7 @@ export function AutoDeployDialog({
     setAnalyzing(true);
     setError(null);
     setResult(null);
-    const res = await analyzeRepoAction(repoUrl, branch.trim() || null);
+    const res = await analyzeRepoAction(repoUrl, branch.trim() || null, baseDir.trim());
     setAnalyzing(false);
     if (res.ok) setResult(res.value);
     else setError(res.error);
@@ -101,7 +104,7 @@ export function AutoDeployDialog({
               className="font-mono text-xs"
             />
           </div>
-          <div className="w-28 space-y-1.5">
+          <div className="w-24 space-y-1.5">
             <Label htmlFor="ad-branch">Rama</Label>
             <Input
               id="ad-branch"
@@ -109,6 +112,16 @@ export function AutoDeployDialog({
               onChange={(e) => setBranch(e.target.value)}
               placeholder="auto"
               className="font-mono"
+            />
+          </div>
+          <div className="w-32 space-y-1.5">
+            <Label htmlFor="ad-dir">Subcarpeta</Label>
+            <Input
+              id="ad-dir"
+              value={baseDir}
+              onChange={(e) => setBaseDir(e.target.value)}
+              placeholder="raíz"
+              className="font-mono text-xs"
             />
           </div>
           <Button onClick={analyze} disabled={analyzing || !repoUrl.trim()}>
@@ -185,25 +198,52 @@ function AnalysisResult({
     })();
   }, [loadEnvs, projectUuid]);
 
+  function currentEnvName() {
+    return environments.find((e) => e.uuid === envUuid)?.name ?? "production";
+  }
+
   async function deploy() {
     setDeploying(true);
     setError(null);
     setOkMsg(null);
-    const env = environments.find((e) => e.uuid === envUuid);
     const res = await createCoolifyAppAction({
       source: "public",
       name,
       projectUuid,
-      environmentName: env?.name ?? "production",
+      environmentName: currentEnvName(),
       environmentUuid: envUuid,
       serverUuid,
       domains: "",
       portsExposes: String(d.port),
       instantDeploy: true,
+      baseDirectory: result.baseDir,
       gitRepository: repoUrl,
       gitBranch: result.branch,
       buildPack,
       dockerfile: "",
+    });
+    setDeploying(false);
+    if (res.ok) {
+      setOkMsg(res.value);
+      await onCreated();
+    } else {
+      setError(res.error);
+    }
+  }
+
+  async function deployCompose() {
+    if (!result.compose) return;
+    setDeploying(true);
+    setError(null);
+    setOkMsg(null);
+    const res = await createCoolifyServiceAction({
+      name: name || result.repo,
+      projectUuid,
+      environmentName: currentEnvName(),
+      environmentUuid: envUuid,
+      serverUuid,
+      dockerCompose: result.compose,
+      instantDeploy: true,
     });
     setDeploying(false);
     if (res.ok) {
@@ -281,13 +321,26 @@ function AnalysisResult({
           </p>
         ) : null}
 
-        <Button
-          onClick={deploy}
-          disabled={deploying || !projectUuid || !envUuid || !serverUuid}
-        >
-          {deploying ? <Loader2 className="animate-spin" /> : <Rocket className="size-3.5" />}
-          Crear y desplegar
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={deploy}
+            disabled={deploying || !projectUuid || !envUuid || !serverUuid}
+          >
+            {deploying ? <Loader2 className="animate-spin" /> : <Rocket className="size-3.5" />}
+            Crear y desplegar
+          </Button>
+          {result.compose ? (
+            <Button
+              variant="outline"
+              onClick={deployCompose}
+              disabled={deploying || !projectUuid || !envUuid || !serverUuid}
+              title="Crea un servicio en Coolify con el docker-compose generado (app + BD)"
+            >
+              <Boxes className="size-3.5" />
+              Desplegar como Compose
+            </Button>
+          ) : null}
+        </div>
       </div>
     </div>
   );

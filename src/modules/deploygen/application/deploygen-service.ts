@@ -10,6 +10,8 @@ export interface AnalyzeResult {
   owner: string;
   repo: string;
   branch: string;
+  /** Subfolder analyzed (for monorepos); "" = repo root. */
+  baseDir: string;
   detection: StackDetection;
   dockerfile: string;
   compose: string | null;
@@ -30,9 +32,15 @@ export class DeploygenService {
   async analyze(
     repoUrl: string,
     branch: string | null,
+    subdir = "",
   ): Promise<Result<AnalyzeResult>> {
     const token = await this.getToken();
-    const fetched = await this.fetcher.fetchRepoFiles(repoUrl, branch, token);
+    const fetched = await this.fetcher.fetchRepoFiles(
+      repoUrl,
+      branch,
+      subdir,
+      token,
+    );
     if (!fetched.ok) return fetched;
 
     const detection = detectStack(fetched.value.files);
@@ -40,6 +48,7 @@ export class DeploygenService {
       owner: fetched.value.owner,
       repo: fetched.value.repo,
       branch: fetched.value.branch,
+      baseDir: subdir.trim().replace(/^\/+|\/+$/g, ""),
       detection,
       dockerfile: generateDockerfile(detection),
       compose: generateCompose(detection),

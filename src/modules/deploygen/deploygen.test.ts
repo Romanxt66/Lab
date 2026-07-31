@@ -96,6 +96,24 @@ describe("detectStack · other runtimes", () => {
     expect(d.framework).toBe("laravel");
   });
 
+  it("detects Rails", () => {
+    const d = detectStack(
+      repo(["Gemfile", "config.ru"], { Gemfile: "gem 'rails', '~> 7.1'" }),
+    );
+    expect(d.runtime).toBe("ruby");
+    expect(d.framework).toBe("rails");
+    expect(generateDockerfile(d)).toContain("FROM ruby:");
+  });
+
+  it("detects a Maven Java project", () => {
+    const d = detectStack(repo(["pom.xml"], { "pom.xml": "<project/>" }));
+    expect(d.runtime).toBe("java");
+    expect(d.packageManager).toBe("maven");
+    const df = generateDockerfile(d);
+    expect(df).toContain("maven:");
+    expect(df).toContain("eclipse-temurin:21-jre");
+  });
+
   it("detects a plain static site", () => {
     const d = detectStack(repo(["index.html", "style.css"]));
     expect(d.runtime).toBe("static");

@@ -83,6 +83,8 @@ export interface CreateAppInput {
   domains: string;
   portsExposes: string;
   instantDeploy: boolean;
+  /** Subfolder to build from (monorepos); "" = repo root. */
+  baseDirectory: string;
   // source === "public"
   gitRepository: string;
   gitBranch: string;

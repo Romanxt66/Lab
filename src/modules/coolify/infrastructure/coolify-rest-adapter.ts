@@ -171,6 +171,7 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
     if (input.name.trim()) common.name = input.name.trim();
     if (input.domains.trim()) common.domains = input.domains.trim();
     if (input.portsExposes.trim()) common.ports_exposes = input.portsExposes.trim();
+    if (input.baseDirectory.trim()) common.base_directory = `/${input.baseDirectory.trim().replace(/^\/+/, "")}`;
 
     const path =
       input.source === "dockerfile"

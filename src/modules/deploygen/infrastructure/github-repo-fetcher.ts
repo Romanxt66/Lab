@@ -18,6 +18,10 @@ const KEY_FILES = [
   "pyproject.toml",
   "composer.json",
   "go.mod",
+  "Gemfile",
+  "pom.xml",
+  "build.gradle",
+  "build.gradle.kts",
 ];
 
 function headers(token: string | null): HeadersInit {
@@ -73,6 +77,7 @@ export class GitHubRepoFetcher implements RepoFetcherPort {
   async fetchRepoFiles(
     repoUrl: string,
     branch: string | null,
+    subdir: string,
     token: string | null,
   ): Promise<Result<FetchedRepo>> {
     const parsed = parseRepo(repoUrl);
@@ -91,23 +96,30 @@ export class GitHubRepoFetcher implements RepoFetcherPort {
       ref = info.value.default_branch ?? "main";
     }
 
-    // Root listing → file paths.
-    const root = await this.getJson<{ name: string; type: string }[]>(
-      `${API}/repos/${owner}/${repo}/contents?ref=${encodeURIComponent(ref)}`,
+    // Optional subfolder (monorepos). Normalise to "path/" or "".
+    const prefix = subdir.trim().replace(/^\/+|\/+$/g, "");
+    const dirPath = prefix ? `/${encodeURIComponent(prefix).replace(/%2F/g, "/")}` : "";
+
+    // Directory listing → file paths.
+    const listing = await this.getJson<{ name: string; type: string }[]>(
+      `${API}/repos/${owner}/${repo}/contents${dirPath}?ref=${encodeURIComponent(ref)}`,
       token,
     );
-    if (!root.ok) return root;
-    if (!root.value) return err("No se pudo leer el contenido del repositorio.");
+    if (!listing.ok) return listing;
+    if (!listing.value) {
+      return err(prefix ? `No se encontró el directorio "${prefix}".` : "No se pudo leer el contenido del repositorio.");
+    }
 
-    const paths = root.value.map((e) => e.name);
+    const paths = listing.value.map((e) => e.name);
     const rootNames = new Set(paths.map((p) => p.toLowerCase()));
 
-    // Fetch the contents of key manifests that exist at the root.
+    // Fetch the contents of key manifests that exist in this directory.
     const files: Record<string, string> = {};
     for (const key of KEY_FILES) {
       if (!rootNames.has(key.toLowerCase())) continue;
+      const filePath = prefix ? `${prefix}/${key}` : key;
       const file = await this.getJson<{ content?: string; encoding?: string }>(
-        `${API}/repos/${owner}/${repo}/contents/${encodeURIComponent(key)}?ref=${encodeURIComponent(ref)}`,
+        `${API}/repos/${owner}/${repo}/contents/${filePath.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(ref)}`,
         token,
       );
       if (file.ok && file.value?.content) {

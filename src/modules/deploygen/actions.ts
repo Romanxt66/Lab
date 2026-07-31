@@ -7,6 +7,7 @@ import type { AnalyzeResult } from "@/modules/deploygen/application/deploygen-se
 export async function analyzeRepoAction(
   repoUrl: string,
   branch: string | null,
+  subdir = "",
 ): Promise<Result<AnalyzeResult>> {
-  return getDeploygenService().analyze(repoUrl, branch);
+  return getDeploygenService().analyze(repoUrl, branch, subdir);
 }

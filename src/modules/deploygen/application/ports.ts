@@ -14,6 +14,8 @@ export interface RepoFetcherPort {
   fetchRepoFiles(
     repoUrl: string,
     branch: string | null,
+    /** Subfolder to analyze (for monorepos); empty = repo root. */
+    subdir: string,
     token: string | null,
   ): Promise<Result<FetchedRepo>>;
 }

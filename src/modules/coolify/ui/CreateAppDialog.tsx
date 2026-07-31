@@ -96,6 +96,7 @@ export function CreateAppDialog({
       domains,
       portsExposes,
       instantDeploy,
+      baseDirectory: "",
       gitRepository,
       gitBranch,
       buildPack,

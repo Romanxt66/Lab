@@ -286,6 +286,45 @@ export function detectStack(files: RepoFiles): StackDetection {
     };
   }
 
+  // --- Ruby / Rails -------------------------------------------------------
+  const gemfile = read(files, "Gemfile");
+  if (gemfile !== null || has(files, "Gemfile")) {
+    const isRails = (gemfile ?? "").toLowerCase().includes("rails");
+    return {
+      ...base,
+      runtime: "ruby",
+      framework: isRails ? "rails" : null,
+      packageManager: "bundler",
+      installCommand: "bundle install",
+      buildCommand: isRails ? "bundle exec rake assets:precompile" : null,
+      startCommand: isRails
+        ? "bundle exec rails server -b 0.0.0.0 -p 3000"
+        : "bundle exec rackup -o 0.0.0.0 -p 3000",
+      port: 3000,
+      recommendedBuildPack: base.hasDockerfile ? "dockerfile" : "nixpacks",
+      notes: isRails
+        ? ["Rails: define RAILS_MASTER_KEY (o SECRET_KEY_BASE) y DATABASE_URL; corre migraciones tras el deploy."]
+        : [],
+    };
+  }
+
+  // --- Java (Maven / Gradle) ---------------------------------------------
+  if (has(files, "pom.xml") || has(files, "build.gradle") || has(files, "build.gradle.kts")) {
+    const gradle = has(files, "build.gradle") || has(files, "build.gradle.kts");
+    return {
+      ...base,
+      runtime: "java",
+      framework: "spring",
+      packageManager: gradle ? "gradle" : "maven",
+      installCommand: null,
+      buildCommand: gradle ? "./gradlew build -x test" : "mvn -q package -DskipTests",
+      startCommand: "java -jar app.jar",
+      port: 8080,
+      recommendedBuildPack: base.hasDockerfile ? "dockerfile" : "nixpacks",
+      notes: ["Java: se asume un jar ejecutable (Spring Boot); ajusta el nombre del artefacto si difiere."],
+    };
+  }
+
   // --- Static site --------------------------------------------------------
   if (has(files, "index.html") && !pkg) {
     return {

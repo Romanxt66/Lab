@@ -43,11 +43,55 @@ export function generateDockerfile(d: StackDetection): string {
       return goDockerfile(d);
     case "php":
       return phpDockerfile(d);
+    case "ruby":
+      return rubyDockerfile(d);
+    case "java":
+      return javaDockerfile(d);
     case "static":
       return staticDockerfile();
     default:
       return genericDockerfile(d);
   }
+}
+
+function rubyDockerfile(d: StackDetection): string {
+  const build = d.buildCommand ? `RUN ${d.buildCommand}` : "";
+  const start = d.startCommand ?? "bundle exec rackup -o 0.0.0.0 -p 3000";
+  return `# Generado por Lab · ${d.framework ?? "ruby"}
+FROM ruby:3.3-slim
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential libpq-dev \\
+  && rm -rf /var/lib/apt/lists/*
+COPY Gemfile Gemfile.lock* ./
+RUN bundle install
+COPY . .
+${build}
+EXPOSE ${d.port}
+CMD ${cmdArray(start)}
+`;
+}
+
+function javaDockerfile(d: StackDetection): string {
+  const gradle = d.packageManager === "gradle";
+  const buildStage = gradle
+    ? `FROM gradle:8-jdk21 AS build
+WORKDIR /app
+COPY . .
+RUN gradle build -x test --no-daemon`
+    : `FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY . .
+RUN mvn -q package -DskipTests`;
+  const artifact = gradle ? "build/libs/*.jar" : "target/*.jar";
+  return `# Generado por Lab · java (${gradle ? "gradle" : "maven"})
+${buildStage}
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /app/${artifact} app.jar
+EXPOSE ${d.port}
+CMD ["java", "-jar", "app.jar"]
+`;
 }
 
 function nodeServerDockerfile(d: StackDetection): string {
