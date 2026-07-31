@@ -60,6 +60,8 @@ import { PrismaMovementRepo } from "@/modules/inventory/infrastructure/prisma-mo
 import { GitHubService } from "@/modules/github/application/github-service";
 import { PrismaGitHubConfigRepo } from "@/modules/github/infrastructure/prisma-github-config-repo";
 import { GitHubRestAdapter } from "@/modules/github/infrastructure/github-rest-adapter";
+import { DeploygenService } from "@/modules/deploygen/application/deploygen-service";
+import { GitHubRepoFetcher } from "@/modules/deploygen/infrastructure/github-repo-fetcher";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -211,6 +213,16 @@ export function getInventoryService(): InventoryService {
 
 export function getGitHubService(): GitHubService {
   return new GitHubService(new PrismaGitHubConfigRepo(), new GitHubRestAdapter());
+}
+
+// --- Deploygen (auto-deploy generator) -------------------------------------
+
+export function getDeploygenService(): DeploygenService {
+  const githubConfig = new PrismaGitHubConfigRepo();
+  return new DeploygenService(
+    new GitHubRepoFetcher(),
+    async () => (await githubConfig.getActive())?.token ?? null,
+  );
 }
 
 // --- DB Admin --------------------------------------------------------------

@@ -20,6 +20,7 @@ import {
   Trash2,
   Pencil,
   Check,
+  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,7 @@ import { AppDetailDialog } from "./AppDetailDialog";
 import { CreateAppDialog } from "./CreateAppDialog";
 import { CreateDatabaseDialog } from "./CreateDatabaseDialog";
 import { CreateProjectDialog } from "./CreateProjectDialog";
+import { AutoDeployDialog } from "./AutoDeployDialog";
 import { STATE_DOT, STATE_TEXT } from "./status";
 
 export function CoolifyTool() {
@@ -122,6 +124,7 @@ function Dashboard({
   const [creating, setCreating] = React.useState(false);
   const [creatingDb, setCreatingDb] = React.useState(false);
   const [creatingProject, setCreatingProject] = React.useState(false);
+  const [autoDeploy, setAutoDeploy] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -161,6 +164,16 @@ function Dashboard({
         <div className="flex items-center gap-2">
           <Button
             size="sm"
+            onClick={() => setAutoDeploy(true)}
+            disabled={loading || !overview}
+            title="Analiza un repo y genera el Dockerfile/compose"
+          >
+            <Wand2 className="size-3.5" />
+            Auto-deploy
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
             onClick={() => setCreating(true)}
             disabled={loading || !overview}
           >
@@ -319,6 +332,15 @@ function Dashboard({
       {creatingProject ? (
         <CreateProjectDialog
           onClose={() => setCreatingProject(false)}
+          onCreated={refresh}
+        />
+      ) : null}
+
+      {autoDeploy && overview ? (
+        <AutoDeployDialog
+          projects={overview.projects}
+          servers={overview.servers}
+          onClose={() => setAutoDeploy(false)}
           onCreated={refresh}
         />
       ) : null}
