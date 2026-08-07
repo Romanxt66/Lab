@@ -74,6 +74,81 @@ export class GitHubRepoFetcher implements RepoFetcherPort {
     }
   }
 
+  /**
+   * Create or update a file via the contents API. Requires a token with write
+   * access to the repo; updating needs the current blob SHA.
+   */
+  async commitFile(
+    repoUrl: string,
+    branch: string,
+    path: string,
+    content: string,
+    message: string,
+    token: string | null,
+  ): Promise<Result<string>> {
+    if (!token) {
+      return err(
+        "Necesitas un token de GitHub con permiso de escritura (conéctalo en la herramienta GitHub).",
+      );
+    }
+    const parsed = parseRepo(repoUrl);
+    if (!parsed) return err("URL de repositorio no válida.");
+    const { owner, repo } = parsed;
+    const cleanPath = path.replace(/^\/+/, "");
+    const apiPath = cleanPath.split("/").map(encodeURIComponent).join("/");
+    const url = `${API}/repos/${owner}/${repo}/contents/${apiPath}`;
+
+    // Existing file? We need its SHA to update it.
+    const existing = await this.getJson<{ sha?: string }>(
+      `${url}?ref=${encodeURIComponent(branch)}`,
+      token,
+    );
+    if (!existing.ok) return existing;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        method: "PUT",
+        headers: { ...headers(token), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          content: Buffer.from(content, "utf8").toString("base64"),
+          branch,
+          ...(existing.value?.sha ? { sha: existing.value.sha } : {}),
+        }),
+        signal: controller.signal,
+      });
+      if (res.status === 401 || res.status === 403) {
+        return err(
+          "GitHub rechazó la escritura: el token necesita permiso de escritura (scope repo / Contents: write).",
+        );
+      }
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`;
+        try {
+          const body = (await res.json()) as { message?: string };
+          if (body?.message) detail = body.message;
+        } catch {
+          /* ignore */
+        }
+        return err(`GitHub: ${detail}`);
+      }
+      return ok(
+        existing.value?.sha
+          ? `${cleanPath} actualizado en ${branch}.`
+          : `${cleanPath} creado en ${branch}.`,
+      );
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") {
+        return err("La petición a GitHub superó el tiempo límite.");
+      }
+      return err(e instanceof Error ? e.message : "Error de red con GitHub.");
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async fetchRepoFiles(
     repoUrl: string,
     branch: string | null,

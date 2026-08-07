@@ -12,11 +12,15 @@ import {
   Server,
   Package,
   Boxes,
+  GitCommitHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { analyzeRepoAction } from "@/modules/deploygen/actions";
+import {
+  analyzeRepoAction,
+  commitGeneratedFileAction,
+} from "@/modules/deploygen/actions";
 import type { AnalyzeResult } from "@/modules/deploygen/application/deploygen-service";
 import {
   coolifyEnvironmentsAction,
@@ -280,9 +284,27 @@ function AnalysisResult({
       </div>
 
       {/* Generated files */}
-      <CodeBlock title="Dockerfile generado" code={result.dockerfile} />
+      <CodeBlock
+        title="Dockerfile generado"
+        code={result.dockerfile}
+        commit={{
+          repoUrl,
+          branch: result.branch,
+          baseDir: result.baseDir,
+          fileName: "Dockerfile",
+        }}
+      />
       {result.compose ? (
-        <CodeBlock title="docker-compose (app + BD)" code={result.compose} />
+        <CodeBlock
+          title="docker-compose (app + BD)"
+          code={result.compose}
+          commit={{
+            repoUrl,
+            branch: result.branch,
+            baseDir: result.baseDir,
+            fileName: "docker-compose.yml",
+          }}
+        />
       ) : null}
 
       {/* Deploy config */}
@@ -355,28 +377,100 @@ function Badge({ icon, children }: { icon?: React.ReactNode; children: React.Rea
   );
 }
 
-function CodeBlock({ title, code }: { title: string; code: string }) {
+function CodeBlock({
+  title,
+  code,
+  commit,
+}: {
+  title: string;
+  code: string;
+  /** When set, offers to commit this file into the repo. */
+  commit?: {
+    repoUrl: string;
+    branch: string;
+    baseDir: string;
+    fileName: string;
+  };
+}) {
   const [copied, setCopied] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+  const [msg, setMsg] = React.useState<string | null>(null);
+  const [err, setErr] = React.useState<string | null>(null);
+
+  async function saveToRepo() {
+    if (!commit) return;
+    const target = commit.baseDir
+      ? `${commit.baseDir}/${commit.fileName}`
+      : commit.fileName;
+    if (
+      !confirm(
+        `¿Guardar ${target} en la rama "${commit.branch}" del repositorio?\n\nSe hará un commit en GitHub (requiere token con permiso de escritura).`,
+      )
+    ) {
+      return;
+    }
+    setSaving(true);
+    setMsg(null);
+    setErr(null);
+    const res = await commitGeneratedFileAction({
+      repoUrl: commit.repoUrl,
+      branch: commit.branch,
+      baseDir: commit.baseDir,
+      fileName: commit.fileName,
+      content: code,
+    });
+    setSaving(false);
+    if (res.ok) setMsg(res.value);
+    else setErr(res.error);
+  }
+
   return (
     <div className="rounded-lg border border-border/60">
-      <div className="flex items-center justify-between border-b border-border/60 px-3 py-1.5">
+      <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-1.5">
         <span className="text-xs font-medium">{title}</span>
-        <button
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(code);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            } catch {
-              /* clipboard may be blocked */
-            }
-          }}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-        >
-          {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
-          {copied ? "Copiado" : "Copiar"}
-        </button>
+        <div className="flex items-center gap-3">
+          {commit ? (
+            <button
+              onClick={saveToRepo}
+              disabled={saving}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              title="Hace commit del archivo en tu repositorio de GitHub"
+            >
+              {saving ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <GitCommitHorizontal className="size-3" />
+              )}
+              Guardar en el repo
+            </button>
+          ) : null}
+          <button
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(code);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              } catch {
+                /* clipboard may be blocked */
+              }
+            }}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+            {copied ? "Copiado" : "Copiar"}
+          </button>
+        </div>
       </div>
+      {msg ? (
+        <p className="border-b border-border/60 px-3 py-1.5 text-xs text-success">
+          {msg}
+        </p>
+      ) : null}
+      {err ? (
+        <p className="border-b border-border/60 px-3 py-1.5 text-xs text-danger">
+          {err}
+        </p>
+      ) : null}
       <pre className="max-h-56 overflow-auto p-3 font-mono text-xs leading-relaxed">
         {code}
       </pre>

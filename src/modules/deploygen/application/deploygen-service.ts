@@ -29,6 +29,31 @@ export class DeploygenService {
     private readonly getToken: () => Promise<string | null>,
   ) {}
 
+  /**
+   * Commit a generated file (Dockerfile / docker-compose.yml) into the repo so
+   * it can be deployed with the Docker build pack. Needs a write-scoped token.
+   */
+  async commitGeneratedFile(input: {
+    repoUrl: string;
+    branch: string;
+    /** Subfolder the file belongs to; "" = repo root. */
+    baseDir: string;
+    fileName: string;
+    content: string;
+  }): Promise<Result<string>> {
+    const token = await this.getToken();
+    const dir = input.baseDir.trim().replace(/^\/+|\/+$/g, "");
+    const path = dir ? `${dir}/${input.fileName}` : input.fileName;
+    return this.fetcher.commitFile(
+      input.repoUrl,
+      input.branch,
+      path,
+      input.content,
+      `chore: add ${input.fileName} (generado por Lab)`,
+      token,
+    );
+  }
+
   async analyze(
     repoUrl: string,
     branch: string | null,

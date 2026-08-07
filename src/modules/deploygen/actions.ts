@@ -11,3 +11,14 @@ export async function analyzeRepoAction(
 ): Promise<Result<AnalyzeResult>> {
   return getDeploygenService().analyze(repoUrl, branch, subdir);
 }
+
+/** Commit a generated Dockerfile / docker-compose.yml into the repo. */
+export async function commitGeneratedFileAction(input: {
+  repoUrl: string;
+  branch: string;
+  baseDir: string;
+  fileName: string;
+  content: string;
+}): Promise<Result<string>> {
+  return getDeploygenService().commitGeneratedFile(input);
+}

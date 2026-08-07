@@ -9,7 +9,7 @@ export interface FetchedRepo {
   files: RepoFiles;
 }
 
-/** Reads a repository's files (used to detect the stack). */
+/** Reads (and optionally writes) a repository's files. */
 export interface RepoFetcherPort {
   fetchRepoFiles(
     repoUrl: string,
@@ -18,4 +18,16 @@ export interface RepoFetcherPort {
     subdir: string,
     token: string | null,
   ): Promise<Result<FetchedRepo>>;
+  /**
+   * Create or update a file in the repo (needs a token with write access).
+   * Used to commit a generated Dockerfile so it can be deployed with Docker.
+   */
+  commitFile(
+    repoUrl: string,
+    branch: string,
+    path: string,
+    content: string,
+    message: string,
+    token: string | null,
+  ): Promise<Result<string>>;
 }
