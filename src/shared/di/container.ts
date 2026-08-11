@@ -62,6 +62,10 @@ import { PrismaGitHubConfigRepo } from "@/modules/github/infrastructure/prisma-g
 import { GitHubRestAdapter } from "@/modules/github/infrastructure/github-rest-adapter";
 import { DeploygenService } from "@/modules/deploygen/application/deploygen-service";
 import { GitHubRepoFetcher } from "@/modules/deploygen/infrastructure/github-repo-fetcher";
+import { UptimeService } from "@/modules/uptime/application/uptime-service";
+import { PrismaMonitorRepo } from "@/modules/uptime/infrastructure/prisma-monitor-repo";
+import { PrismaCheckRepo } from "@/modules/uptime/infrastructure/prisma-check-repo";
+import { FetchHttpProbe } from "@/modules/uptime/infrastructure/fetch-http-probe";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -222,6 +226,17 @@ export function getDeploygenService(): DeploygenService {
   return new DeploygenService(
     new GitHubRepoFetcher(),
     async () => (await githubConfig.getActive())?.token ?? null,
+  );
+}
+
+// --- Uptime monitoring -----------------------------------------------------
+
+export function getUptimeService(): UptimeService {
+  return new UptimeService(
+    new PrismaMonitorRepo(),
+    new PrismaCheckRepo(),
+    new FetchHttpProbe(),
+    getSendNotification(),
   );
 }
 

@@ -5,6 +5,7 @@ import {
   getRunJob,
   getProcessCalendarReminders,
   getProcessRecurring,
+  getUptimeService,
 } from "@/shared/di/container";
 
 /**
@@ -68,7 +69,25 @@ export function startSystemCronTasks(): void {
     }
   });
 
-  globalForCron.__systemTasks = [reminderTask, recurringTask];
+  // Uptime: tick every minute; the service only probes monitors that are due
+  // (per their own interval) and alerts on up→down / down→up transitions.
+  const uptimeTask = cron.schedule("* * * * *", async () => {
+    try {
+      const summary = await getUptimeService().runDueChecks();
+      if (summary.checked > 0 && (summary.down > 0 || summary.recovered > 0 || summary.errors.length)) {
+        console.log(
+          `[uptime] chequeados=${summary.checked} caidos=${summary.down} recuperados=${summary.recovered}` +
+            (summary.errors.length
+              ? ` errores=${summary.errors.slice(0, 3).join(" | ")}`
+              : ""),
+        );
+      }
+    } catch (e) {
+      console.error("[uptime] error:", e);
+    }
+  });
+
+  globalForCron.__systemTasks = [reminderTask, recurringTask, uptimeTask];
 }
 
 /** Rebuild all node-cron tasks from the current set of enabled jobs. */

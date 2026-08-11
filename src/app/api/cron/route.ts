@@ -4,6 +4,7 @@ import {
   getRunDueJobs,
   getProcessCalendarReminders,
   getProcessRecurring,
+  getUptimeService,
 } from "@/shared/di/container";
 
 /**
@@ -26,16 +27,18 @@ export async function GET(req: Request) {
     );
   }
 
-  const [jobs, reminders, recurring] = await Promise.all([
+  const [jobs, reminders, recurring, uptime] = await Promise.all([
     getRunDueJobs().execute(),
     getProcessCalendarReminders().execute(),
     getProcessRecurring().execute(),
+    getUptimeService().runDueChecks(),
   ]);
   return NextResponse.json({
     ok: true,
     jobs,
     reminders,
     recurring,
+    uptime,
     at: new Date().toISOString(),
   });
 }

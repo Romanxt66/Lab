@@ -12,6 +12,7 @@ const CATEGORY_ORDER: ToolCategory[] = [
   "inventory",
   "github",
   "deploy",
+  "monitor",
   "database",
   "calendar",
   "email",

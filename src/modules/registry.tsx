@@ -12,6 +12,7 @@ import {
   Boxes,
   FolderGit2,
   Rocket,
+  Activity,
 } from "lucide-react";
 import { EmailAutomation } from "@/modules/email/ui/EmailAutomation";
 import { ScraperTool } from "@/modules/scraper/ui/ScraperTool";
@@ -23,6 +24,7 @@ import { FinanceTool } from "@/modules/finance/ui/FinanceTool";
 import { InventoryTool } from "@/modules/inventory/ui/InventoryTool";
 import { GitHubTool } from "@/modules/github/ui/GitHubTool";
 import { CoolifyTool } from "@/modules/coolify/ui/CoolifyTool";
+import { UptimeTool } from "@/modules/uptime/ui/UptimeTool";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -42,7 +44,8 @@ export type ToolCategory =
   | "finance"
   | "inventory"
   | "github"
-  | "deploy";
+  | "deploy"
+  | "monitor";
 
 export interface CategoryMeta {
   id: ToolCategory;
@@ -55,6 +58,7 @@ export const CATEGORIES: Record<ToolCategory, CategoryMeta> = {
   inventory: { id: "inventory", label: "Inventario", icon: Boxes },
   github: { id: "github", label: "GitHub", icon: FolderGit2 },
   deploy: { id: "deploy", label: "Despliegues", icon: Rocket },
+  monitor: { id: "monitor", label: "Monitoreo", icon: Activity },
   database: { id: "database", label: "Base de datos", icon: Database },
   calendar: { id: "calendar", label: "Calendario", icon: CalendarDays },
   email: { id: "email", label: "Correos", icon: Mail },
@@ -182,6 +186,17 @@ export const TOOLS: ToolMeta[] = [
     icon: Rocket,
     status: "ready",
     Component: CoolifyTool,
+    wide: true,
+  },
+  {
+    slug: "uptime",
+    name: "Monitor de Uptime",
+    description:
+      "Vigila webs y APIs, guarda el historial y avisa por Telegram cuando se caen.",
+    category: "monitor",
+    icon: Activity,
+    status: "ready",
+    Component: UptimeTool,
     wide: true,
   },
 ];

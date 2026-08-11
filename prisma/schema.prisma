@@ -331,3 +331,45 @@ model NotificationConfig {
 
   @@map("lab_notification_config")
 }
+
+/// Uptime monitor — periodically probes a URL and records the result. Sends a
+/// Telegram alert when a monitor transitions down (and again when it recovers).
+model UptimeMonitor {
+  id                  String    @id @default(uuid())
+  name                String
+  url                 String
+  method              String    @default("GET") // "GET" | "HEAD"
+  /// Expected HTTP status; 0 = accept any 2xx/3xx.
+  expectedStatus      Int       @default(0)
+  intervalSeconds     Int       @default(300)
+  timeoutMs           Int       @default(10000)
+  active              Boolean   @default(true)
+  notifyOnFailure     Boolean   @default(true)
+  /// Runtime state (updated by each check).
+  lastStatus          String    @default("unknown") // "up" | "down" | "unknown"
+  lastCheckedAt       DateTime?
+  lastResponseMs      Int?
+  lastStatusCode      Int?
+  lastError           String?
+  consecutiveFailures Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  checks              UptimeCheck[]
+
+  @@map("lab_uptime_monitor")
+}
+
+/// A single probe result in a monitor's history.
+model UptimeCheck {
+  id         String        @id @default(uuid())
+  monitorId  String
+  monitor    UptimeMonitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  ok         Boolean
+  statusCode Int?
+  responseMs Int?
+  error      String?
+  checkedAt  DateTime      @default(now())
+
+  @@index([monitorId, checkedAt])
+  @@map("lab_uptime_check")
+}
