@@ -9,6 +9,22 @@ import type {
   NotificationSenderPort,
 } from "@/modules/notifications/application/ports";
 import type { NotificationConfig } from "@/modules/notifications/domain/config";
+import { AutomationService } from "@/modules/automations/application/automation-service";
+import type { TriggerType } from "@/modules/automations/domain/automation";
+
+/**
+ * Records trigger() calls without touching real deps — every method that
+ * would use them (rules repo, notifier, calendar) is overridden below.
+ */
+class RecordingAutomations extends AutomationService {
+  calls: { type: TriggerType; vars: Record<string, string> }[] = [];
+  constructor() {
+    super(null as never, null as never, null as never);
+  }
+  override async trigger(type: TriggerType, vars: Record<string, string>) {
+    this.calls.push({ type, vars });
+  }
+}
 
 function makeUser(overrides: Partial<User> = {}): User {
   return {
@@ -115,7 +131,8 @@ describe("GoogleLoginUseCase", () => {
   it("self-registers a brand-new email as pending and notifies", async () => {
     const repo = new FakeUserRepo();
     const sender = new RecordingSender();
-    const res = await new GoogleLoginUseCase(repo, notifier(sender)).execute({
+    const automations = new RecordingAutomations();
+    const res = await new GoogleLoginUseCase(repo, notifier(sender), automations).execute({
       email: "new@lab.local",
       name: "New Guy",
       picture: null,
@@ -127,11 +144,14 @@ describe("GoogleLoginUseCase", () => {
     expect(repo.registered[0].passwordHash).toBeNull();
     expect(sender.sent).toHaveLength(1);
     expect(sender.sent[0]).toMatch(/new@lab.local/);
+    expect(automations.calls).toEqual([
+      { type: "user_registered", vars: { nombre: "New Guy", email: "new@lab.local" } },
+    ]);
   });
 
   it("logs in an existing approved account", async () => {
     const repo = new FakeUserRepo([makeUser({ status: "approved" })]);
-    const res = await new GoogleLoginUseCase(repo, notifier()).execute({
+    const res = await new GoogleLoginUseCase(repo, notifier(), new RecordingAutomations()).execute({
       email: "ana@lab.local",
       name: "Ana",
       picture: null,
@@ -147,7 +167,7 @@ describe("GoogleLoginUseCase", () => {
   it("returns pending (not new) for an existing unapproved account", async () => {
     const repo = new FakeUserRepo([makeUser({ status: "pending" })]);
     const sender = new RecordingSender();
-    const res = await new GoogleLoginUseCase(repo, notifier(sender)).execute({
+    const res = await new GoogleLoginUseCase(repo, notifier(sender), new RecordingAutomations()).execute({
       email: "ana@lab.local",
       name: "Ana",
       picture: null,
@@ -161,7 +181,7 @@ describe("GoogleLoginUseCase", () => {
 
   it("blocks a rejected account", async () => {
     const repo = new FakeUserRepo([makeUser({ status: "rejected" })]);
-    const res = await new GoogleLoginUseCase(repo, notifier()).execute({
+    const res = await new GoogleLoginUseCase(repo, notifier(), new RecordingAutomations()).execute({
       email: "ana@lab.local",
       name: "Ana",
       picture: null,
@@ -177,7 +197,7 @@ describe("RegisterUseCase", () => {
   it("creates a pending account and notifies", async () => {
     const repo = new FakeUserRepo();
     const sender = new RecordingSender();
-    const res = await new RegisterUseCase(repo, hash, notifier(sender)).execute({
+    const res = await new RegisterUseCase(repo, hash, notifier(sender), new RecordingAutomations()).execute({
       email: "nuevo@lab.local",
       name: "Nuevo",
       password: "supersecret",
@@ -189,7 +209,7 @@ describe("RegisterUseCase", () => {
 
   it("rejects a short password", async () => {
     const repo = new FakeUserRepo();
-    const res = await new RegisterUseCase(repo, hash, notifier()).execute({
+    const res = await new RegisterUseCase(repo, hash, notifier(), new RecordingAutomations()).execute({
       email: "nuevo@lab.local",
       name: "Nuevo",
       password: "short",
@@ -200,7 +220,7 @@ describe("RegisterUseCase", () => {
 
   it("rejects a duplicate email", async () => {
     const repo = new FakeUserRepo([makeUser({ email: "existe@lab.local" })]);
-    const res = await new RegisterUseCase(repo, hash, notifier()).execute({
+    const res = await new RegisterUseCase(repo, hash, notifier(), new RecordingAutomations()).execute({
       email: "existe@lab.local",
       name: "Otra",
       password: "supersecret",

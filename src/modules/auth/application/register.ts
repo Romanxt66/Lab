@@ -1,6 +1,7 @@
 import { type Result, ok, err } from "@/shared/kernel/result";
 import type { UserRepoPort } from "@/modules/users/application/ports";
 import type { SendNotification } from "@/modules/notifications/application/send-notification";
+import type { AutomationService } from "@/modules/automations/application/automation-service";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -13,6 +14,7 @@ export class RegisterUseCase {
     private readonly users: UserRepoPort,
     private readonly hash: (plain: string) => string,
     private readonly notifier: SendNotification,
+    private readonly automations: AutomationService,
   ) {}
 
   async execute(input: {
@@ -39,6 +41,7 @@ export class RegisterUseCase {
     await this.notifier.execute(
       `🆕 Nuevo registro pendiente de aprobación\n${name}\n${email}`,
     );
+    await this.automations.trigger("user_registered", { nombre: name, email });
     return ok(null);
   }
 }

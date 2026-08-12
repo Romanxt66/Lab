@@ -11,6 +11,7 @@ import {
   type UptimeMonitor,
 } from "@/modules/uptime/domain/monitor";
 import type { SendNotification } from "@/modules/notifications/application/send-notification";
+import type { AutomationService } from "@/modules/automations/application/automation-service";
 import type {
   CheckRepoPort,
   HttpProbePort,
@@ -41,6 +42,7 @@ export class UptimeService {
     private readonly checks: CheckRepoPort,
     private readonly probe: HttpProbePort,
     private readonly notifier: SendNotification,
+    private readonly automations: AutomationService,
   ) {}
 
   list(): Promise<UptimeMonitor[]> {
@@ -134,6 +136,16 @@ export class UptimeService {
 
     if (alert && monitor.notifyOnFailure) {
       await this.notifier.execute(this.alertMessage(monitor, alert, probe));
+    }
+    if (alert) {
+      await this.automations.trigger(
+        alert === "down" ? "uptime_down" : "uptime_recovered",
+        {
+          monitor: monitor.name,
+          url: monitor.url,
+          motivo: probe.error ?? (probe.statusCode ? `HTTP ${probe.statusCode}` : ""),
+        },
+      );
     }
     return alert;
   }

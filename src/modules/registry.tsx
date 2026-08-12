@@ -14,6 +14,7 @@ import {
   Rocket,
   Activity,
   Users,
+  Zap,
 } from "lucide-react";
 import { EmailAutomation } from "@/modules/email/ui/EmailAutomation";
 import { ScraperTool } from "@/modules/scraper/ui/ScraperTool";
@@ -27,6 +28,7 @@ import { GitHubTool } from "@/modules/github/ui/GitHubTool";
 import { CoolifyTool } from "@/modules/coolify/ui/CoolifyTool";
 import { UptimeTool } from "@/modules/uptime/ui/UptimeTool";
 import { UserAdminTool } from "@/modules/users/ui/UserAdminTool";
+import { AutomationsTool } from "@/modules/automations/ui/AutomationsTool";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -48,7 +50,8 @@ export type ToolCategory =
   | "github"
   | "deploy"
   | "monitor"
-  | "admin";
+  | "admin"
+  | "automations";
 
 export interface CategoryMeta {
   id: ToolCategory;
@@ -63,6 +66,7 @@ export const CATEGORIES: Record<ToolCategory, CategoryMeta> = {
   deploy: { id: "deploy", label: "Despliegues", icon: Rocket },
   monitor: { id: "monitor", label: "Monitoreo", icon: Activity },
   admin: { id: "admin", label: "Administración", icon: Users },
+  automations: { id: "automations", label: "Automatizaciones", icon: Zap },
   database: { id: "database", label: "Base de datos", icon: Database },
   calendar: { id: "calendar", label: "Calendario", icon: CalendarDays },
   email: { id: "email", label: "Correos", icon: Mail },
@@ -215,6 +219,17 @@ export const TOOLS: ToolMeta[] = [
     Component: UserAdminTool,
     wide: true,
     superadminOnly: true,
+  },
+  {
+    slug: "automations",
+    name: "Automatizaciones",
+    description:
+      "Reglas \"cuando pase X, haz Y\" que conectan monitores, finanzas y registros con Telegram o el calendario.",
+    category: "automations",
+    icon: Zap,
+    status: "ready",
+    Component: AutomationsTool,
+    wide: true,
   },
 ];
 

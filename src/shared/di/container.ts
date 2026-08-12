@@ -69,6 +69,8 @@ import { UptimeService } from "@/modules/uptime/application/uptime-service";
 import { PrismaMonitorRepo } from "@/modules/uptime/infrastructure/prisma-monitor-repo";
 import { PrismaCheckRepo } from "@/modules/uptime/infrastructure/prisma-check-repo";
 import { FetchHttpProbe } from "@/modules/uptime/infrastructure/fetch-http-probe";
+import { AutomationService } from "@/modules/automations/application/automation-service";
+import { PrismaAutomationRepo } from "@/modules/automations/infrastructure/prisma-automation-repo";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -176,6 +178,16 @@ export function getProcessCalendarReminders(): ProcessCalendarReminders {
   );
 }
 
+// --- Automations -------------------------------------------------------------
+
+export function getAutomationService(): AutomationService {
+  return new AutomationService(
+    new PrismaAutomationRepo(),
+    getSendNotification(),
+    getCalendarService(),
+  );
+}
+
 // --- Finance ---------------------------------------------------------------
 
 export function getFinanceService(): FinanceService {
@@ -185,6 +197,7 @@ export function getFinanceService(): FinanceService {
     new PrismaTransactionRepo(),
     new PrismaBudgetRepo(),
     new PrismaRecurringRepo(),
+    getAutomationService(),
   );
 }
 
@@ -240,6 +253,7 @@ export function getUptimeService(): UptimeService {
     new PrismaCheckRepo(),
     new FetchHttpProbe(),
     getSendNotification(),
+    getAutomationService(),
   );
 }
 
@@ -270,9 +284,14 @@ export function getLogin(): LoginUseCase {
 }
 
 export function getGoogleLogin(): GoogleLoginUseCase {
-  return new GoogleLoginUseCase(getUserRepo(), getSendNotification());
+  return new GoogleLoginUseCase(getUserRepo(), getSendNotification(), getAutomationService());
 }
 
 export function getRegister(): RegisterUseCase {
-  return new RegisterUseCase(getUserRepo(), hashPassword, getSendNotification());
+  return new RegisterUseCase(
+    getUserRepo(),
+    hashPassword,
+    getSendNotification(),
+    getAutomationService(),
+  );
 }

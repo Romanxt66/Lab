@@ -378,3 +378,35 @@ model UptimeCheck {
   @@index([monitorId, checkedAt])
   @@map("lab_uptime_check")
 }
+
+/// Automation rule: "when <trigger> happens, run these actions". Triggers are
+/// fired from other modules (uptime, finance, users); actions are a small,
+/// fixed set (Telegram message, create calendar event) with `{{variable}}`
+/// templates filled from the trigger's payload.
+model AutomationRule {
+  id        String   @id @default(uuid())
+  name      String
+  trigger   String // TriggerType, e.g. "uptime_down"
+  active    Boolean  @default(true)
+  /// ActionConfig[] — see src/modules/automations/domain/automation.ts
+  actions   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  runs      AutomationRun[]
+
+  @@map("lab_automation_rule")
+}
+
+/// Execution log for a rule — one row per trigger firing, so failures (e.g. a
+/// misconfigured template) are visible instead of silently swallowed.
+model AutomationRun {
+  id      String         @id @default(uuid())
+  ruleId  String
+  rule    AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  ok      Boolean
+  error   String?
+  ranAt   DateTime       @default(now())
+
+  @@index([ruleId, ranAt])
+  @@map("lab_automation_run")
+}

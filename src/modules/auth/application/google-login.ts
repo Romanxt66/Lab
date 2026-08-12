@@ -1,6 +1,7 @@
 import { type Result, ok, err } from "@/shared/kernel/result";
 import type { UserRepoPort } from "@/modules/users/application/ports";
 import type { SendNotification } from "@/modules/notifications/application/send-notification";
+import type { AutomationService } from "@/modules/automations/application/automation-service";
 import type { AuthenticatedUser } from "./login";
 
 export const GOOGLE_LOGIN_SCOPE = "openid email profile";
@@ -31,6 +32,7 @@ export class GoogleLoginUseCase {
   constructor(
     private readonly users: UserRepoPort,
     private readonly notifier: SendNotification,
+    private readonly automations: AutomationService,
   ) {}
 
   async execute(profile: GoogleProfile): Promise<Result<GoogleLoginOutcome>> {
@@ -50,6 +52,10 @@ export class GoogleLoginUseCase {
       await this.notifier.execute(
         `🆕 Nuevo registro pendiente de aprobación\n${profile.name ?? email}\n${email}`,
       );
+      await this.automations.trigger("user_registered", {
+        nombre: profile.name ?? email,
+        email,
+      });
     }
 
     if (user.status === "pending") return ok({ kind: "pending", isNew });

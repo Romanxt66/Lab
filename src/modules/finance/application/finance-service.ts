@@ -39,6 +39,7 @@ import type {
   BudgetRepoPort,
   RecurringRepoPort,
 } from "./ports";
+import type { AutomationService } from "@/modules/automations/application/automation-service";
 
 export interface AccountWithBalance {
   account: FinancialAccount;
@@ -61,6 +62,7 @@ export class FinanceService {
     private readonly transactions: TransactionRepoPort,
     private readonly budgets: BudgetRepoPort,
     private readonly recurring: RecurringRepoPort,
+    private readonly automations: AutomationService,
   ) {}
 
   // -- Accounts -----------------------------------------------------------
@@ -136,11 +138,52 @@ export class FinanceService {
   ): Promise<Result<FinancialTransaction>> {
     const valid = validateTransactionInput(input);
     if (!valid.ok) return valid;
-    return ok(
-      input.id
-        ? await this.transactions.update(input.id, valid.value)
-        : await this.transactions.create(valid.value),
-    );
+    const saved = input.id
+      ? await this.transactions.update(input.id, valid.value)
+      : await this.transactions.create(valid.value);
+
+    if (saved.kind === "expense" && saved.categoryId) {
+      await this.checkBudgetExceeded(saved.categoryId, saved.amount, saved.occurredAt);
+    }
+
+    return ok(saved);
+  }
+
+  /**
+   * Fires the `budget_exceeded` automation trigger the moment a category's
+   * spend crosses its limit — not on every subsequent transaction while it
+   * stays over, to avoid repeat alerts for the same month.
+   */
+  private async checkBudgetExceeded(
+    categoryId: string,
+    justSpent: number,
+    occurredAt: Date,
+  ): Promise<void> {
+    const budgets = await this.budgets.list();
+    const budget = budgets.find((b) => b.categoryId === categoryId);
+    if (!budget) return;
+
+    const year = occurredAt.getFullYear();
+    const month = occurredAt.getMonth() + 1;
+    const tx = await this.transactions.list({
+      from: new Date(year, month - 1, 1),
+      to: new Date(year, month, 1),
+    });
+    const spentAfter = tx
+      .filter((t) => t.categoryId === categoryId && t.kind === "expense")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const spentBefore = spentAfter - justSpent;
+
+    const wasOver = budgetProgress(categoryId, budget.amount, spentBefore).status === "over";
+    const isOver = budgetProgress(categoryId, budget.amount, spentAfter).status === "over";
+    if (wasOver || !isOver) return;
+
+    const category = await this.categories.get(categoryId);
+    await this.automations.trigger("budget_exceeded", {
+      categoria: category?.name ?? "Sin categoría",
+      limite: String(budget.amount),
+      gastado: String(Math.round(spentAfter * 100) / 100),
+    });
   }
 
   async removeTransaction(id: string): Promise<void> {

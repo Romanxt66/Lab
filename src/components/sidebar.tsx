@@ -11,6 +11,7 @@ const CATEGORY_ORDER: ToolCategory[] = [
   "admin",
   "calendar",
   "monitor",
+  "automations",
   "github",
   "deploy",
   "notifications",
