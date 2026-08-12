@@ -1,11 +1,15 @@
 export type UserRole = "user" | "superadmin";
+export type UserStatus = "pending" | "approved" | "rejected";
 
 export interface User {
   id: string;
   email: string;
   name: string | null;
-  passwordHash: string;
+  picture: string | null;
+  /** Null for accounts created via Google-only sign-in. */
+  passwordHash: string | null;
   role: UserRole;
+  status: UserStatus;
   createdAt: Date;
 }
 
@@ -18,5 +22,15 @@ export interface UserRepoPort {
     passwordHash: string;
     role: UserRole;
   }): Promise<User>;
+  /** Self-registration (Google or password form): always created as "pending" / "user". */
+  register(input: {
+    email: string;
+    name?: string | null;
+    picture?: string | null;
+    passwordHash: string | null;
+  }): Promise<User>;
+  list(): Promise<User[]>;
+  updateStatus(id: string, status: UserStatus): Promise<User>;
+  updateRole(id: string, role: UserRole): Promise<User>;
   count(): Promise<number>;
 }

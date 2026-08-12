@@ -91,8 +91,13 @@ model UsuariosLab {
   id           String     @id @default(uuid())
   email        String     @unique
   name         String?
-  passwordHash String
-  role         String     @default("user") // "user" | "superadmin"
+  picture      String?
+  // Nullable: users who sign up with Google only never set a password.
+  passwordHash String?
+  role         String     @default("user")     // "user" | "superadmin"
+  // New self-registrations start "pending" until the superadmin approves them;
+  // existing rows default to "approved" so nobody gets locked out by this change.
+  status       String     @default("approved") // "pending" | "approved" | "rejected"
   createdAt    DateTime   @default(now())
   eventos      Calendario[]
 

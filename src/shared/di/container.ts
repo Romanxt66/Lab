@@ -42,7 +42,10 @@ import { ProcessCalendarReminders } from "@/modules/calendar/application/process
 import { PrismaUserRepo } from "@/modules/users/infrastructure/prisma-user-repo";
 import type { UserRepoPort } from "@/modules/users/application/ports";
 import { LoginUseCase } from "@/modules/auth/application/login";
-import { verifyPassword } from "@/shared/password";
+import { GoogleLoginUseCase } from "@/modules/auth/application/google-login";
+import { RegisterUseCase } from "@/modules/auth/application/register";
+import { verifyPassword, hashPassword } from "@/shared/password";
+import { UserAdminService } from "@/modules/users/application/user-admin-service";
 import { FinanceService } from "@/modules/finance/application/finance-service";
 import { ProcessRecurring } from "@/modules/finance/application/process-recurring";
 import { PrismaAccountRepo } from "@/modules/finance/infrastructure/prisma-account-repo";
@@ -256,8 +259,20 @@ export function getUserRepo(): UserRepoPort {
   return new PrismaUserRepo();
 }
 
+export function getUserAdminService(): UserAdminService {
+  return new UserAdminService(getUserRepo());
+}
+
 // --- Auth ------------------------------------------------------------------
 
 export function getLogin(): LoginUseCase {
   return new LoginUseCase(getUserRepo(), verifyPassword);
+}
+
+export function getGoogleLogin(): GoogleLoginUseCase {
+  return new GoogleLoginUseCase(getUserRepo(), getSendNotification());
+}
+
+export function getRegister(): RegisterUseCase {
+  return new RegisterUseCase(getUserRepo(), hashPassword, getSendNotification());
 }

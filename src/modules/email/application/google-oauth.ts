@@ -16,20 +16,36 @@ export interface OAuthConfig {
   redirectUri: string;
 }
 
+export interface AuthUrlOptions {
+  /** Defaults to the Gmail-send scope (the "connect a mailbox" flow). */
+  scope?: string;
+  /** Request a refresh_token. Defaults to true (needed to send mail later). */
+  offline?: boolean;
+  /** Force the consent screen even on repeat visits. Defaults to true. */
+  forceConsent?: boolean;
+}
+
 /**
  * Build the URL to redirect the user to Google's consent screen.
  * - `prompt=select_account consent`: shows the same account picker Gmail uses
  *   and forces a fresh consent so we ALWAYS get a refresh_token back.
  * - `access_type=offline`: required to receive a refresh_token.
+ * A plain "sign in" use (no mailbox access needed) should pass a narrower
+ * `scope` and `offline: false, forceConsent: false`.
  */
-export function buildAuthUrl(cfg: OAuthConfig, state: string): string {
+export function buildAuthUrl(
+  cfg: OAuthConfig,
+  state: string,
+  opts: AuthUrlOptions = {},
+): string {
+  const { scope = GMAIL_SEND_SCOPE, offline = true, forceConsent = true } = opts;
   const params = new URLSearchParams({
     client_id: cfg.clientId,
     redirect_uri: cfg.redirectUri,
     response_type: "code",
-    scope: GMAIL_SEND_SCOPE,
-    access_type: "offline",
-    prompt: "select_account consent",
+    scope,
+    access_type: offline ? "offline" : "online",
+    prompt: forceConsent ? "select_account consent" : "select_account",
     include_granted_scopes: "true",
     state,
   });

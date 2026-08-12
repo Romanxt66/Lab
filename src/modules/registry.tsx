@@ -13,6 +13,7 @@ import {
   FolderGit2,
   Rocket,
   Activity,
+  Users,
 } from "lucide-react";
 import { EmailAutomation } from "@/modules/email/ui/EmailAutomation";
 import { ScraperTool } from "@/modules/scraper/ui/ScraperTool";
@@ -25,6 +26,7 @@ import { InventoryTool } from "@/modules/inventory/ui/InventoryTool";
 import { GitHubTool } from "@/modules/github/ui/GitHubTool";
 import { CoolifyTool } from "@/modules/coolify/ui/CoolifyTool";
 import { UptimeTool } from "@/modules/uptime/ui/UptimeTool";
+import { UserAdminTool } from "@/modules/users/ui/UserAdminTool";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -45,7 +47,8 @@ export type ToolCategory =
   | "inventory"
   | "github"
   | "deploy"
-  | "monitor";
+  | "monitor"
+  | "admin";
 
 export interface CategoryMeta {
   id: ToolCategory;
@@ -59,6 +62,7 @@ export const CATEGORIES: Record<ToolCategory, CategoryMeta> = {
   github: { id: "github", label: "GitHub", icon: FolderGit2 },
   deploy: { id: "deploy", label: "Despliegues", icon: Rocket },
   monitor: { id: "monitor", label: "Monitoreo", icon: Activity },
+  admin: { id: "admin", label: "Administración", icon: Users },
   database: { id: "database", label: "Base de datos", icon: Database },
   calendar: { id: "calendar", label: "Calendario", icon: CalendarDays },
   email: { id: "email", label: "Correos", icon: Mail },
@@ -80,6 +84,8 @@ export interface ToolMeta {
   Component?: ComponentType;
   /** Widen the tool's page container (useful for DB-admin style layouts). */
   wide?: boolean;
+  /** Hidden from the sidebar/dashboard and blocked at the route for non-superadmins. */
+  superadminOnly?: boolean;
 }
 
 /**
@@ -199,10 +205,26 @@ export const TOOLS: ToolMeta[] = [
     Component: UptimeTool,
     wide: true,
   },
+  {
+    slug: "users",
+    name: "Usuarios",
+    description: "Aprueba registros pendientes y administra roles y accesos.",
+    category: "admin",
+    icon: Users,
+    status: "ready",
+    Component: UserAdminTool,
+    wide: true,
+    superadminOnly: true,
+  },
 ];
 
 export function getTool(slug: string): ToolMeta | undefined {
   return TOOLS.find((t) => t.slug === slug);
+}
+
+/** Whether a tool should be visible/reachable for the given session role. */
+export function isToolVisible(tool: ToolMeta, role: string | undefined): boolean {
+  return !tool.superadminOnly || role === "superadmin";
 }
 
 export function toolsByCategory(category: ToolCategory): ToolMeta[] {

@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { type Result, ok } from "@/shared/kernel/result";
-import { getLogin } from "@/shared/di/container";
+import { getLogin, getRegister } from "@/shared/di/container";
 import {
   createSessionToken,
   SESSION_COOKIE,
@@ -33,6 +33,14 @@ export async function loginAction(input: {
     maxAge: SESSION_MAX_AGE,
   });
   return ok(null);
+}
+
+export async function registerAction(input: {
+  email: string;
+  name: string;
+  password: string;
+}): Promise<Result<null>> {
+  return getRegister().execute(input);
 }
 
 export async function logoutAction(): Promise<void> {

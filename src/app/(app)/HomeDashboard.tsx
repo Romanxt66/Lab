@@ -4,7 +4,7 @@ import * as React from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Sparkles, LayoutGrid, Clock } from "lucide-react";
-import { TOOLS, type ToolMeta } from "@/modules/registry";
+import { TOOLS, isToolVisible, type ToolMeta } from "@/modules/registry";
 import { cn } from "@/lib/utils";
 import { PersonalizationPanel } from "@/components/personalization-panel";
 import {
@@ -14,10 +14,16 @@ import {
   summarize,
 } from "@/lib/usage";
 
-const READY = TOOLS.filter((t) => t.status === "ready");
-const BY_SLUG = new Map(READY.map((t) => [t.slug, t]));
+export function HomeDashboard({ role }: { role?: string }) {
+  const READY = React.useMemo(
+    () => TOOLS.filter((t) => t.status === "ready" && isToolVisible(t, role)),
+    [role],
+  );
+  const BY_SLUG = React.useMemo(
+    () => new Map(READY.map((t) => [t.slug, t])),
+    [READY],
+  );
 
-export function HomeDashboard() {
   // Reactive usage snapshot (localStorage), hydration-safe via server snapshot.
   const visits = React.useSyncExternalStore(
     subscribeUsage,

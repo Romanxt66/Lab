@@ -5,19 +5,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FlaskConical, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CATEGORIES, TOOLS, type ToolCategory } from "@/modules/registry";
+import { CATEGORIES, TOOLS, isToolVisible, type ToolCategory } from "@/modules/registry";
 
 const CATEGORY_ORDER: ToolCategory[] = [
-  "finance",
-  "inventory",
+  "admin",
+  "calendar",
+  "monitor",
   "github",
   "deploy",
-  "monitor",
-  "database",
-  "calendar",
-  "email",
   "notifications",
+  "finance",
+  "database",
+  "inventory",
   "scraper",
+  "email",
   "scheduler",
 ];
 
@@ -37,7 +38,7 @@ function readCollapsed() {
   return localStorage.getItem(STORAGE_KEY) === "1";
 }
 
-export function Sidebar() {
+export function Sidebar({ role }: { role?: string }) {
   const pathname = usePathname();
   // The collapsed flag lives in localStorage (an external store): read it
   // reactively so a toggle re-renders without a setState-in-effect, and it
@@ -82,7 +83,9 @@ export function Sidebar() {
       <nav className={cn("flex-1 overflow-y-auto pb-4", collapsed ? "px-2" : "px-3")}>
         {CATEGORY_ORDER.map((catId) => {
           const cat = CATEGORIES[catId];
-          const tools = TOOLS.filter((t) => t.category === catId);
+          const tools = TOOLS.filter(
+            (t) => t.category === catId && isToolVisible(t, role),
+          );
           if (tools.length === 0) return null;
           const CatIcon = cat.icon;
           return (

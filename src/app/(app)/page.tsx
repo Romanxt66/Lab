@@ -19,7 +19,7 @@ export default async function HomePage() {
         </p>
       </header>
 
-      <HomeDashboard />
+      <HomeDashboard role={user?.role} />
     </div>
   );
 }

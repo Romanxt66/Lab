@@ -27,10 +27,16 @@ export class LoginUseCase {
       return err("Introduce email y contraseña.");
     }
     const user = await this.users.findByEmail(normalized);
-    // Same message whether the user is missing or the password is wrong, to
-    // avoid leaking which emails exist.
-    if (!user || !this.verify(password, user.passwordHash)) {
+    // Same message whether the user is missing, has no password (Google-only
+    // account) or the password is wrong, to avoid leaking which emails exist.
+    if (!user || !user.passwordHash || !this.verify(password, user.passwordHash)) {
       return err("Credenciales inválidas.");
+    }
+    if (user.status === "pending") {
+      return err("Tu cuenta está pendiente de aprobación por el administrador.");
+    }
+    if (user.status === "rejected") {
+      return err("Tu acceso fue rechazado. Contacta al administrador.");
     }
     return ok({
       uid: user.id,

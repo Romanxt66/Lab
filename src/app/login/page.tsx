@@ -5,13 +5,19 @@ import { LoginForm } from "@/modules/auth/ui/LoginForm";
 
 export const metadata: Metadata = { title: "Iniciar sesión — Lab" };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   // Already authenticated → go straight to the app.
   if (await getCurrentUser()) redirect("/");
 
+  const { error } = await searchParams;
+
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-10">
-      <LoginForm />
+      <LoginForm initialError={error ?? null} />
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { getTool, TOOLS } from "@/modules/registry";
+import { getTool, isToolVisible, TOOLS } from "@/modules/registry";
 import { UsageTracker } from "@/components/usage-tracker";
+import { getCurrentUser } from "@/modules/auth/current-user";
 
 /** Pre-render a page for every registered, ready tool. */
 export function generateStaticParams() {
@@ -29,6 +30,11 @@ export default async function ToolPage({
 
   if (!tool || tool.status !== "ready" || !tool.Component) {
     notFound();
+  }
+
+  if (tool.superadminOnly) {
+    const user = await getCurrentUser();
+    if (!isToolVisible(tool, user?.role)) notFound();
   }
 
   const { Component, name, description, wide } = tool;

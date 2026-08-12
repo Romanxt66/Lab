@@ -42,6 +42,12 @@ const schema = z.object({
    *  redirect URI registered in Google Cloud Console EXACTLY. */
   GOOGLE_REDIRECT_URI: z.string().optional(),
 
+  /** Separate redirect URI for "Sign in with Google" (identity only, no
+   *  Gmail scope). Same GOOGLE_CLIENT_ID/SECRET, different callback path —
+   *  add it as an extra "Authorized redirect URI" on the same OAuth client
+   *  in Google Cloud Console, e.g. https://your-domain.com/api/auth/google/login/callback */
+  GOOGLE_LOGIN_REDIRECT_URI: z.string().optional(),
+
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
@@ -68,6 +74,17 @@ export function assertGoogleOAuth() {
     );
   }
   return { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI };
+}
+
+/** Throws if the "Sign in with Google" login flow is not fully configured. */
+export function assertGoogleLoginOAuth() {
+  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_LOGIN_REDIRECT_URI } = env;
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_LOGIN_REDIRECT_URI) {
+    throw new Error(
+      "El inicio de sesión con Google no está configurado. Define GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET y GOOGLE_LOGIN_REDIRECT_URI en las variables de entorno.",
+    );
+  }
+  return { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_LOGIN_REDIRECT_URI };
 }
 
 /** Throws a friendly error if SMTP is not fully configured. */

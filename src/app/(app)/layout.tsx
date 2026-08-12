@@ -14,7 +14,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      <Sidebar role={user.role} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="glass sticky top-0 z-10 flex h-14 shrink-0 items-center justify-end gap-2 border-b border-border/70 px-6">
           <ThemeToggle />

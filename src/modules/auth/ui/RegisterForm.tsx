@@ -2,31 +2,30 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FlaskConical, Loader2, LogIn } from "lucide-react";
+import { FlaskConical, Loader2, UserPlus, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErrorNote } from "@/modules/dev-utils/ui/shared";
-import { loginAction } from "@/modules/auth/actions";
+import { registerAction } from "@/modules/auth/actions";
 import { GoogleButton } from "./GoogleButton";
 
-export function LoginForm({ initialError }: { initialError?: string | null }) {
-  const router = useRouter();
+export function RegisterForm() {
+  const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [error, setError] = React.useState<string | null>(initialError ?? null);
+  const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [submitted, setSubmitted] = React.useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
-      const res = await loginAction({ email, password });
+      const res = await registerAction({ email, name, password });
       if (res.ok) {
-        router.replace("/");
-        router.refresh();
+        setSubmitted(true);
       } else {
         setError(res.error);
         setLoading(false);
@@ -35,6 +34,24 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
       setError("No se pudo conectar. ¿Está la base de datos accesible?");
       setLoading(false);
     }
+  }
+
+  if (submitted) {
+    return (
+      <div className="w-full max-w-sm">
+        <div className="glass space-y-3 rounded-xl border border-border/60 p-6 text-center shadow-sm">
+          <MailCheck className="mx-auto size-8 text-success" />
+          <h1 className="text-lg font-semibold tracking-tight">Solicitud enviada</h1>
+          <p className="text-sm text-muted-foreground">
+            Un administrador debe aprobar tu cuenta antes de que puedas entrar. Te
+            avisaremos cuando esté lista.
+          </p>
+          <Link href="/login" className="inline-block text-sm font-medium hover:underline">
+            Volver a iniciar sesión
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -46,7 +63,7 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
         <div>
           <h1 className="text-lg font-semibold tracking-tight">Lab</h1>
           <p className="text-sm text-muted-foreground">
-            Inicia sesión para continuar
+            Crea una cuenta — necesita aprobación
           </p>
         </div>
       </div>
@@ -56,6 +73,17 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
         className="glass space-y-4 rounded-xl border border-border/60 p-6 shadow-sm"
       >
         <div className="space-y-1.5">
+          <Label htmlFor="name">Nombre</Label>
+          <Input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Tu nombre"
+            autoFocus
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
@@ -63,8 +91,7 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
             autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@lab.local"
-            autoFocus
+            placeholder="tucorreo@dominio.com"
             required
           />
         </div>
@@ -73,10 +100,10 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
           <Input
             id="password"
             type="password"
-            autoComplete="current-password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
+            placeholder="Mínimo 8 caracteres"
             required
           />
         </div>
@@ -84,8 +111,8 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
         {error ? <ErrorNote>{error}</ErrorNote> : null}
 
         <Button type="submit" disabled={loading} className="w-full">
-          {loading ? <Loader2 className="animate-spin" /> : <LogIn />}
-          {loading ? "Entrando…" : "Iniciar sesión"}
+          {loading ? <Loader2 className="animate-spin" /> : <UserPlus />}
+          {loading ? "Enviando…" : "Solicitar acceso"}
         </Button>
 
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -97,9 +124,9 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
         <GoogleButton />
 
         <p className="text-center text-sm text-muted-foreground">
-          ¿No tienes cuenta?{" "}
-          <Link href="/register" className="font-medium text-foreground hover:underline">
-            Regístrate
+          ¿Ya tienes cuenta?{" "}
+          <Link href="/login" className="font-medium text-foreground hover:underline">
+            Inicia sesión
           </Link>
         </p>
       </form>
