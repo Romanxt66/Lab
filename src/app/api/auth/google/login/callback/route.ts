@@ -9,6 +9,7 @@ import {
   OAUTH_STATE_COOKIE,
 } from "@/modules/email/infrastructure/oauth-state";
 import { getGoogleLogin } from "@/shared/di/container";
+import { publicOrigin } from "@/shared/request-origin";
 import {
   createSessionToken,
   SESSION_COOKIE,
@@ -25,7 +26,10 @@ export async function GET(req: Request) {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const oauthErr = url.searchParams.get("error");
-  const loginUrl = new URL("/login", url.origin);
+  // NOT url.origin: behind Coolify's proxy that is the container's internal
+  // host (localhost:3000), which would redirect the user off-site.
+  const origin = publicOrigin(req);
+  const loginUrl = new URL("/login", origin);
 
   function fail(message: string) {
     loginUrl.searchParams.set("error", message);
@@ -96,7 +100,7 @@ export async function GET(req: Request) {
       role: user.role,
     });
 
-    const res = NextResponse.redirect(new URL("/", url.origin));
+    const res = NextResponse.redirect(new URL("/", origin));
     res.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,
       sameSite: "lax",

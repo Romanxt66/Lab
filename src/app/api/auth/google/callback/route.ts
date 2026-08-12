@@ -9,6 +9,7 @@ import {
   OAUTH_STATE_COOKIE,
 } from "@/modules/email/infrastructure/oauth-state";
 import { getGoogleAccountRepo } from "@/shared/di/container";
+import { publicOrigin } from "@/shared/request-origin";
 
 /**
  * OAuth callback: verify the state, exchange the code for tokens, fetch the
@@ -20,8 +21,9 @@ export async function GET(req: Request) {
   const state = url.searchParams.get("state");
   const err = url.searchParams.get("error");
 
-  // Where to send the user after we're done.
-  const backUrl = new URL("/tools/email-automation", url.origin);
+  // Where to send the user after we're done. NOT url.origin: behind a reverse
+  // proxy that is the container's internal host (localhost:3000).
+  const backUrl = new URL("/tools/email-automation", publicOrigin(req));
 
   if (err) {
     backUrl.searchParams.set("google", "error");
