@@ -71,11 +71,29 @@ export async function GET(req: Request) {
     });
     if (!login.ok) return fail(login.error);
 
+    // The Google account was linked fine; it just isn't cleared to enter yet.
+    // Send the user back to /login with a status (not an error) to explain.
+    if (login.value.kind !== "session") {
+      loginUrl.searchParams.set(
+        "status",
+        login.value.kind === "pending"
+          ? login.value.isNew
+            ? "registered"
+            : "pending"
+          : "rejected",
+      );
+      loginUrl.searchParams.set("email", profile.email);
+      const res = NextResponse.redirect(loginUrl);
+      res.cookies.delete(OAUTH_STATE_COOKIE);
+      return res;
+    }
+
+    const { user } = login.value;
     const token = await createSessionToken({
-      uid: login.value.uid,
-      email: login.value.email,
-      name: login.value.name,
-      role: login.value.role,
+      uid: user.uid,
+      email: user.email,
+      name: user.name,
+      role: user.role,
     });
 
     const res = NextResponse.redirect(new URL("/", url.origin));

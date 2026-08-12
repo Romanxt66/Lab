@@ -12,9 +12,20 @@ export interface GoogleProfile {
 }
 
 /**
+ * What happened once the Google identity was linked successfully. Awaiting
+ * approval is a normal outcome — not an error — so the caller can show a
+ * friendly "waiting" screen instead of a failure.
+ */
+export type GoogleLoginOutcome =
+  | { kind: "session"; user: AuthenticatedUser }
+  /** `isNew` distinguishes "we just created your account" from "still waiting". */
+  | { kind: "pending"; isNew: boolean }
+  | { kind: "rejected" };
+
+/**
  * Sign in (or self-register) with a Google identity. A first-time email
  * creates a "pending" account and notifies the superadmin; only "approved"
- * accounts get a session.
+ * accounts get a session. `err` is reserved for genuine failures.
  */
 export class GoogleLoginUseCase {
   constructor(
@@ -22,11 +33,13 @@ export class GoogleLoginUseCase {
     private readonly notifier: SendNotification,
   ) {}
 
-  async execute(profile: GoogleProfile): Promise<Result<AuthenticatedUser>> {
+  async execute(profile: GoogleProfile): Promise<Result<GoogleLoginOutcome>> {
     const email = profile.email.trim().toLowerCase();
     if (!email) return err("Google no devolvió un email válido.");
 
-    let user = await this.users.findByEmail(email);
+    const existing = await this.users.findByEmail(email);
+    const isNew = !existing;
+    let user = existing;
     if (!user) {
       user = await this.users.register({
         email,
@@ -39,18 +52,17 @@ export class GoogleLoginUseCase {
       );
     }
 
-    if (user.status === "pending") {
-      return err("Tu cuenta está pendiente de aprobación por el administrador.");
-    }
-    if (user.status === "rejected") {
-      return err("Tu acceso fue rechazado. Contacta al administrador.");
-    }
+    if (user.status === "pending") return ok({ kind: "pending", isNew });
+    if (user.status === "rejected") return ok({ kind: "rejected" });
 
     return ok({
-      uid: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
+      kind: "session",
+      user: {
+        uid: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
     });
   }
 }

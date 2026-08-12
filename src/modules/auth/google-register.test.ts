@@ -120,8 +120,9 @@ describe("GoogleLoginUseCase", () => {
       name: "New Guy",
       picture: null,
     });
-    expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toMatch(/pendiente/);
+    // Linking succeeded; the account just isn't approved yet ("registered").
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.value).toEqual({ kind: "pending", isNew: true });
     expect(repo.registered).toHaveLength(1);
     expect(repo.registered[0].passwordHash).toBeNull();
     expect(sender.sent).toHaveLength(1);
@@ -136,18 +137,26 @@ describe("GoogleLoginUseCase", () => {
       picture: null,
     });
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.value.email).toBe("ana@lab.local");
+    if (res.ok && res.value.kind === "session") {
+      expect(res.value.user.email).toBe("ana@lab.local");
+    } else {
+      expect.fail("expected a session");
+    }
   });
 
-  it("blocks a pending account without re-registering", async () => {
+  it("returns pending (not new) for an existing unapproved account", async () => {
     const repo = new FakeUserRepo([makeUser({ status: "pending" })]);
-    const res = await new GoogleLoginUseCase(repo, notifier()).execute({
+    const sender = new RecordingSender();
+    const res = await new GoogleLoginUseCase(repo, notifier(sender)).execute({
       email: "ana@lab.local",
       name: "Ana",
       picture: null,
     });
-    expect(res.ok).toBe(false);
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.value).toEqual({ kind: "pending", isNew: false });
+    // No duplicate registration and no repeat Telegram alert.
     expect(repo.registered).toHaveLength(0);
+    expect(sender.sent).toHaveLength(0);
   });
 
   it("blocks a rejected account", async () => {
@@ -157,8 +166,8 @@ describe("GoogleLoginUseCase", () => {
       name: "Ana",
       picture: null,
     });
-    expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toMatch(/rechazado/);
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.value.kind).toBe("rejected");
   });
 });
 

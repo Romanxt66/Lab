@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FlaskConical, Loader2, LogIn } from "lucide-react";
+import { FlaskConical, Loader2, LogIn, Clock3, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +11,28 @@ import { ErrorNote } from "@/modules/dev-utils/ui/shared";
 import { loginAction } from "@/modules/auth/actions";
 import { GoogleButton } from "./GoogleButton";
 
-export function LoginForm({ initialError }: { initialError?: string | null }) {
+export function LoginForm({
+  initialError,
+  status,
+  statusEmail,
+}: {
+  initialError?: string | null;
+  /** Outcome of a Google sign-in round-trip: registered | pending | rejected. */
+  status?: string | null;
+  statusEmail?: string | null;
+}) {
   const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(initialError ?? null);
   const [loading, setLoading] = React.useState(false);
+
+  // A rejected account is a hard stop; show it in the error slot instead.
+  const rejected = status === "rejected";
+  const awaiting = status === "registered" || status === "pending";
+  const displayError = rejected
+    ? "Tu acceso fue rechazado. Contacta al administrador."
+    : error;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,6 +67,27 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
         </div>
       </div>
 
+      {awaiting ? (
+        <div className="mb-4 rounded-xl border border-accent/30 bg-accent/10 p-4">
+          <p className="flex items-center gap-2 text-sm font-medium">
+            {status === "registered" ? (
+              <CheckCircle2 className="size-4 shrink-0 text-success" />
+            ) : (
+              <Clock3 className="size-4 shrink-0 text-accent" />
+            )}
+            En espera de aprobación
+          </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            {status === "registered"
+              ? "Vinculamos tu cuenta de Google correctamente. Un administrador debe aprobar tu acceso antes de que puedas entrar."
+              : "Tu cuenta aún no ha sido aprobada por el administrador."}
+          </p>
+          {statusEmail ? (
+            <p className="mt-1.5 truncate text-xs text-muted-foreground">{statusEmail}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       <form
         onSubmit={onSubmit}
         className="glass space-y-4 rounded-xl border border-border/60 p-6 shadow-sm"
@@ -81,7 +118,7 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
           />
         </div>
 
-        {error ? <ErrorNote>{error}</ErrorNote> : null}
+        {displayError ? <ErrorNote>{displayError}</ErrorNote> : null}
 
         <Button type="submit" disabled={loading} className="w-full">
           {loading ? <Loader2 className="animate-spin" /> : <LogIn />}
