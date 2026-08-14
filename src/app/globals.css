@@ -424,6 +424,67 @@ body::after {
   animation: page-in 0.3s var(--ease-out-expo) both;
 }
 
+/* --- Assistant widget --------------------------------------------------- */
+@keyframes assistant-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(-2deg);
+  }
+}
+.assistant-bob {
+  animation: assistant-bob 3.4s var(--ease-in-out) infinite;
+}
+
+@keyframes assistant-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.12);
+  }
+}
+.assistant-blink {
+  animation: assistant-blink 4.6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes assistant-think-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+.assistant-think-dot {
+  animation: assistant-think-dot 1.1s ease-in-out infinite;
+}
+
+@keyframes assistant-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+    transform-origin: bottom right;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    transform-origin: bottom right;
+  }
+}
+.assistant-panel-enter {
+  animation: assistant-pop 0.28s var(--ease-out-expo) both;
+}
+
 /* Never fight the user's motion preference. Also cap iterations so the
  * infinite ambient drift settles on its first frame instead of looping fast. */
 @media (prefers-reduced-motion: reduce) {

@@ -48,6 +48,10 @@ const schema = z.object({
    *  in Google Cloud Console, e.g. https://your-domain.com/api/auth/google/login/callback */
   GOOGLE_LOGIN_REDIRECT_URI: z.string().optional(),
 
+  // Assistant widget (chat over the Lab's own data via the Anthropic API).
+  ANTHROPIC_API_KEY: z.string().optional(),
+  ANTHROPIC_MODEL: z.string().default("claude-sonnet-5"),
+
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
@@ -85,6 +89,16 @@ export function assertGoogleLoginOAuth() {
     );
   }
   return { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_LOGIN_REDIRECT_URI };
+}
+
+/** Throws if the assistant widget's Anthropic API key is missing. */
+export function assertAnthropicConfigured() {
+  if (!env.ANTHROPIC_API_KEY) {
+    throw new Error(
+      "El asistente no está configurado. Define ANTHROPIC_API_KEY en las variables de entorno.",
+    );
+  }
+  return { apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL };
 }
 
 /** Throws a friendly error if SMTP is not fully configured. */

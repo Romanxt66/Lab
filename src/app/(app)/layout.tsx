@@ -4,6 +4,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 import { PageTransition } from "@/components/page-transition";
 import { getCurrentUser } from "@/modules/auth/current-user";
+import { AssistantWidget } from "@/modules/assistant/ui/AssistantWidget";
 
 /** Authenticated app shell. Middleware guards routing; this is defense in depth. */
 export default async function AppLayout({
@@ -24,6 +25,7 @@ export default async function AppLayout({
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
+      <AssistantWidget />
     </div>
   );
 }
