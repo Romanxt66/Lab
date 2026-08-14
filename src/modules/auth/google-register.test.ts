@@ -19,7 +19,7 @@ import type { TriggerType } from "@/modules/automations/domain/automation";
 class RecordingAutomations extends AutomationService {
   calls: { type: TriggerType; vars: Record<string, string> }[] = [];
   constructor() {
-    super(null as never, null as never, null as never);
+    super(null as never, null as never, null as never, null as never);
   }
   override async trigger(type: TriggerType, vars: Record<string, string>) {
     this.calls.push({ type, vars });

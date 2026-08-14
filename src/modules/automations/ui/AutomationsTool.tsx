@@ -11,6 +11,7 @@ import {
   History,
   Send,
   CalendarPlus,
+  Webhook,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import {
 
 function defaultActionFor(type: ActionType): ActionConfig {
   if (type === "telegram") return { type, config: { message: "" } };
+  if (type === "n8n_webhook") return { type, config: { webhookUrl: "" } };
   return { type, config: { title: "", description: "", daysFromNow: 0 } };
 }
 
@@ -145,7 +147,14 @@ export function AutomationsTool() {
 
 function actionSummary(action: ActionConfig): string {
   if (action.type === "telegram") return "Telegram";
+  if (action.type === "n8n_webhook") return "n8n";
   return "Evento de calendario";
+}
+
+function actionIcon(action: ActionConfig) {
+  if (action.type === "telegram") return <Send className="size-3" />;
+  if (action.type === "n8n_webhook") return <Webhook className="size-3" />;
+  return <CalendarPlus className="size-3" />;
 }
 
 function RuleCard({
@@ -195,7 +204,7 @@ function RuleCard({
             key={i}
             className="inline-flex items-center gap-1 rounded bg-accent/10 px-1.5 py-0.5 text-xs text-accent"
           >
-            {a.type === "telegram" ? <Send className="size-3" /> : <CalendarPlus className="size-3" />}
+            {actionIcon(a)}
             {actionSummary(a)}
           </span>
         ))}
@@ -377,6 +386,22 @@ function ActionEditor({
           rows={2}
           className="font-mono text-xs"
         />
+      ) : action.type === "n8n_webhook" ? (
+        <div className="space-y-1.5">
+          <Input
+            value={action.config.webhookUrl}
+            onChange={(e) =>
+              onChange({ type: "n8n_webhook", config: { webhookUrl: e.target.value } })
+            }
+            placeholder="https://n8n.midominio.com/webhook/xxxxx"
+            inputMode="url"
+            className="font-mono text-xs"
+          />
+          <p className="text-xs text-muted-foreground">
+            Envía <code className="font-mono">{"{ trigger, ...variables }"}</code> como
+            JSON a la URL del nodo Webhook del workflow.
+          </p>
+        </div>
       ) : (
         <div className="grid gap-2 sm:grid-cols-[2fr_1fr]">
           <Input

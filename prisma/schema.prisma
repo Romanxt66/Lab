@@ -321,6 +321,21 @@ model CoolifyConfig {
   @@map("lab_coolify_config")
 }
 
+/// n8n connection for the Automations → n8n panel. Stores the instance base
+/// URL and a Public API key. Only one active row at a time is expected.
+model N8nConfig {
+  id        String   @id @default(uuid())
+  /// Base URL of the n8n instance, e.g. https://n8n.midominio.com
+  baseUrl   String
+  /// API key created in n8n → Settings > n8n API.
+  apiKey    String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("lab_n8n_config")
+}
+
 /// Notification channel config. Only one active row at a time is expected;
 /// the calendar reminder job sends to whichever row has `active = true`.
 /// `provider` decides how `recipient` and `credential` are interpreted:

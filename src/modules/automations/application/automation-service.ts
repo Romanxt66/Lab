@@ -13,7 +13,7 @@ import {
 import { renderTemplate } from "@/modules/email/domain/template";
 import type { SendNotification } from "@/modules/notifications/application/send-notification";
 import type { CalendarService } from "@/modules/calendar/application/calendar-service";
-import type { AutomationRuleRepoPort } from "./ports";
+import type { AutomationRuleRepoPort, WebhookPort } from "./ports";
 
 /**
  * AutomationService: CRUD over rules, plus `trigger()` — the entry point
@@ -26,6 +26,7 @@ export class AutomationService {
     private readonly rules: AutomationRuleRepoPort,
     private readonly notifier: SendNotification,
     private readonly calendar: CalendarService,
+    private readonly webhooks: WebhookPort,
   ) {}
 
   list(): Promise<AutomationRuleDTO[]> {
@@ -65,7 +66,7 @@ export class AutomationService {
       let error: string | null = null;
       try {
         for (const action of rule.actions) {
-          const res = await this.runAction(action, vars);
+          const res = await this.runAction(action, vars, type);
           if (!res.ok) {
             succeeded = false;
             error = res.error;
@@ -87,9 +88,14 @@ export class AutomationService {
   private async runAction(
     action: ActionConfig,
     vars: Record<string, string>,
+    type: TriggerType,
   ): Promise<Result<void>> {
     if (action.type === "telegram") {
       return this.notifier.execute(renderTemplate(action.config.message, vars));
+    }
+
+    if (action.type === "n8n_webhook") {
+      return this.webhooks.post(action.config.webhookUrl, { trigger: type, ...vars });
     }
 
     const start = new Date();

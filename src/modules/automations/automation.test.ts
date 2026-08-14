@@ -51,6 +51,31 @@ describe("validateRuleInput", () => {
     expect(res.ok).toBe(false);
   });
 
+  it("rejects an n8n_webhook action with no URL", () => {
+    const res = validateRuleInput(
+      baseInput({ actions: [{ type: "n8n_webhook", config: { webhookUrl: "  " } }] }),
+    );
+    expect(res.ok).toBe(false);
+  });
+
+  it("rejects an n8n_webhook action with a malformed URL", () => {
+    const res = validateRuleInput(
+      baseInput({ actions: [{ type: "n8n_webhook", config: { webhookUrl: "not a url" } }] }),
+    );
+    expect(res.ok).toBe(false);
+  });
+
+  it("accepts a valid n8n_webhook action", () => {
+    const res = validateRuleInput(
+      baseInput({
+        actions: [
+          { type: "n8n_webhook", config: { webhookUrl: "https://n8n.example.com/webhook/abc" } },
+        ],
+      }),
+    );
+    expect(res.ok).toBe(true);
+  });
+
   it("rejects negative daysFromNow", () => {
     const res = validateRuleInput(
       baseInput({

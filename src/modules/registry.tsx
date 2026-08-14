@@ -15,6 +15,7 @@ import {
   Activity,
   Users,
   Zap,
+  Workflow,
 } from "lucide-react";
 import { EmailAutomation } from "@/modules/email/ui/EmailAutomation";
 import { ScraperTool } from "@/modules/scraper/ui/ScraperTool";
@@ -29,6 +30,7 @@ import { CoolifyTool } from "@/modules/coolify/ui/CoolifyTool";
 import { UptimeTool } from "@/modules/uptime/ui/UptimeTool";
 import { UserAdminTool } from "@/modules/users/ui/UserAdminTool";
 import { AutomationsTool } from "@/modules/automations/ui/AutomationsTool";
+import { N8nTool } from "@/modules/n8n/ui/N8nTool";
 
 /**
  * Tool registry — the single source of truth for the lab.
@@ -221,10 +223,21 @@ export const TOOLS: ToolMeta[] = [
     superadminOnly: true,
   },
   {
+    slug: "n8n",
+    name: "n8n",
+    description:
+      "Conecta tu instancia de n8n: ve y activa/desactiva workflows, y dispáralos desde una automatización.",
+    category: "automations",
+    icon: Workflow,
+    status: "ready",
+    Component: N8nTool,
+    wide: true,
+  },
+  {
     slug: "automations",
     name: "Automatizaciones",
     description:
-      "Reglas \"cuando pase X, haz Y\" que conectan monitores, finanzas y registros con Telegram o el calendario.",
+      "Reglas \"cuando pase X, haz Y\" que conectan monitores, finanzas y registros con Telegram, el calendario o n8n.",
     category: "automations",
     icon: Zap,
     status: "ready",

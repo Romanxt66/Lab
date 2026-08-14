@@ -1,3 +1,4 @@
+import { type Result } from "@/shared/kernel/result";
 import type {
   ActionConfig,
   AutomationRule,
@@ -5,6 +6,11 @@ import type {
   AutomationRunRecord,
   TriggerType,
 } from "@/modules/automations/domain/automation";
+
+/** Fires an outbound HTTP call to an external automation tool (e.g. n8n). */
+export interface WebhookPort {
+  post(url: string, body: Record<string, unknown>): Promise<Result<void>>;
+}
 
 export interface AutomationRuleRepoPort {
   list(): Promise<AutomationRule[]>;

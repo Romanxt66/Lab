@@ -44,7 +44,7 @@ export const TRIGGERS: Record<TriggerType, TriggerMeta> = {
 
 export const TRIGGER_TYPES = Object.keys(TRIGGERS) as TriggerType[];
 
-export type ActionType = "telegram" | "calendar_event";
+export type ActionType = "telegram" | "calendar_event" | "n8n_webhook";
 
 export interface TelegramActionConfig {
   message: string;
@@ -57,15 +57,22 @@ export interface CalendarEventActionConfig {
   daysFromNow: number;
 }
 
+export interface N8nWebhookActionConfig {
+  /** A n8n workflow's Webhook-node URL. */
+  webhookUrl: string;
+}
+
 export type ActionConfig =
   | { type: "telegram"; config: TelegramActionConfig }
-  | { type: "calendar_event"; config: CalendarEventActionConfig };
+  | { type: "calendar_event"; config: CalendarEventActionConfig }
+  | { type: "n8n_webhook"; config: N8nWebhookActionConfig };
 
-export const ACTION_TYPES: ActionType[] = ["telegram", "calendar_event"];
+export const ACTION_TYPES: ActionType[] = ["telegram", "calendar_event", "n8n_webhook"];
 
 export const ACTION_LABELS: Record<ActionType, string> = {
   telegram: "Enviar mensaje de Telegram",
   calendar_event: "Crear evento en el calendario",
+  n8n_webhook: "n8n: llamar webhook",
 };
 
 export interface AutomationRule {
@@ -134,6 +141,19 @@ function validateAction(action: ActionConfig, index: number): Result<ActionConfi
     }
     if (!Number.isInteger(action.config.daysFromNow) || action.config.daysFromNow < 0) {
       return err(`Acción ${index + 1}: los días desde hoy deben ser 0 o más.`);
+    }
+    return ok(action);
+  }
+  if (action.type === "n8n_webhook") {
+    const url = action.config.webhookUrl.trim();
+    if (!url) return err(`Acción ${index + 1}: introduce la URL del webhook de n8n.`);
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return err(`Acción ${index + 1}: la URL del webhook debe empezar por http:// o https://`);
+      }
+    } catch {
+      return err(`Acción ${index + 1}: la URL del webhook no es válida.`);
     }
     return ok(action);
   }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ok, err, type Result } from "@/shared/kernel/result";
 import { AutomationService } from "./application/automation-service";
-import type { AutomationRuleRepoPort } from "./application/ports";
+import type { AutomationRuleRepoPort, WebhookPort } from "./application/ports";
 import type {
   AutomationRule,
   AutomationRuleInput,
@@ -126,6 +126,15 @@ class FakeCalendarRepo implements CalendarRepoPort {
   async markReminderSent() {}
 }
 
+class FakeWebhookPort implements WebhookPort {
+  calls: { url: string; body: Record<string, unknown> }[] = [];
+  result: Result<void> = ok(undefined);
+  async post(url: string, body: Record<string, unknown>): Promise<Result<void>> {
+    this.calls.push({ url, body });
+    return this.result;
+  }
+}
+
 function service(
   rules: AutomationRule[],
   sender: NotificationSenderPort = new RecordingSender(),
@@ -134,7 +143,13 @@ function service(
   const notifier = new SendNotification(sender, new ConfigRepo());
   const calendarRepo = new FakeCalendarRepo();
   const calendar = new CalendarService(calendarRepo);
-  return { svc: new AutomationService(repo, notifier, calendar), repo, calendarRepo };
+  const webhooks = new FakeWebhookPort();
+  return {
+    svc: new AutomationService(repo, notifier, calendar, webhooks),
+    repo,
+    calendarRepo,
+    webhooks,
+  };
 }
 
 describe("AutomationService.trigger", () => {
@@ -196,6 +211,38 @@ describe("AutomationService.trigger", () => {
     );
     await svc.trigger("uptime_down", { monitor: "API", url: "", motivo: "" });
     expect(sender.sent).toHaveLength(2);
+  });
+
+  it("posts the trigger type and variables as JSON to the n8n webhook", async () => {
+    const { svc, webhooks } = service([
+      makeRule({
+        actions: [
+          { type: "n8n_webhook", config: { webhookUrl: "https://n8n.example.com/webhook/abc" } },
+        ],
+      }),
+    ]);
+    await svc.trigger("uptime_down", { monitor: "API", url: "https://x", motivo: "timeout" });
+    expect(webhooks.calls).toEqual([
+      {
+        url: "https://n8n.example.com/webhook/abc",
+        body: { trigger: "uptime_down", monitor: "API", url: "https://x", motivo: "timeout" },
+      },
+    ]);
+  });
+
+  it("logs a failed run when the n8n webhook fails", async () => {
+    const { svc, repo, webhooks } = service([
+      makeRule({
+        actions: [
+          { type: "n8n_webhook", config: { webhookUrl: "https://n8n.example.com/webhook/abc" } },
+        ],
+      }),
+    ]);
+    webhooks.result = err("Webhook respondió HTTP 500");
+    await svc.trigger("uptime_down", { monitor: "API", url: "", motivo: "" });
+    expect(repo.runs).toEqual([
+      { ruleId: "r1", ok: false, error: "Webhook respondió HTTP 500" },
+    ]);
   });
 });
 

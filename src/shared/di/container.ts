@@ -71,6 +71,10 @@ import { PrismaCheckRepo } from "@/modules/uptime/infrastructure/prisma-check-re
 import { FetchHttpProbe } from "@/modules/uptime/infrastructure/fetch-http-probe";
 import { AutomationService } from "@/modules/automations/application/automation-service";
 import { PrismaAutomationRepo } from "@/modules/automations/infrastructure/prisma-automation-repo";
+import { FetchWebhookAdapter } from "@/modules/automations/infrastructure/fetch-webhook-adapter";
+import { N8nService } from "@/modules/n8n/application/n8n-service";
+import { N8nRestAdapter } from "@/modules/n8n/infrastructure/n8n-rest-adapter";
+import { PrismaN8nConfigRepo } from "@/modules/n8n/infrastructure/prisma-n8n-config-repo";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -185,7 +189,14 @@ export function getAutomationService(): AutomationService {
     new PrismaAutomationRepo(),
     getSendNotification(),
     getCalendarService(),
+    new FetchWebhookAdapter(),
   );
+}
+
+// --- n8n ---------------------------------------------------------------------
+
+export function getN8nService(): N8nService {
+  return new N8nService(new N8nRestAdapter(), new PrismaN8nConfigRepo());
 }
 
 // --- Finance ---------------------------------------------------------------
