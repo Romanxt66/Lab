@@ -7,12 +7,22 @@ import { type Result } from "@/shared/kernel/result";
  * it without leaking its own wire format into the rest of the module.
  */
 
-export interface LlmTextBlock {
+/**
+ * Opaque, provider-issued continuation token attached to a block. It must be
+ * echoed back verbatim on later turns or the provider rejects the request
+ * (Gemini 3 "thought signatures"). Meaningless to this module — never read
+ * or construct one, just carry it through.
+ */
+export interface WithSignature {
+  signature?: string;
+}
+
+export interface LlmTextBlock extends WithSignature {
   type: "text";
   text: string;
 }
 
-export interface LlmToolUseBlock {
+export interface LlmToolUseBlock extends WithSignature {
   type: "tool_use";
   id: string;
   name: string;

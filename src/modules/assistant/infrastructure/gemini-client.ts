@@ -19,6 +19,8 @@ interface GeminiPart {
   text?: string;
   functionCall?: { name: string; id?: string; args?: Record<string, unknown> };
   functionResponse?: { name: string; id?: string; response: Record<string, unknown> };
+  /** Gemini 3 thinking models require this to be echoed back verbatim. */
+  thoughtSignature?: string;
 }
 interface GeminiContent {
   role: "user" | "model";
@@ -35,8 +37,16 @@ function toGeminiRole(role: LlmMessage["role"]): "user" | "model" {
 }
 
 function blockToPart(b: LlmContentBlock): GeminiPart {
-  if (b.type === "text") return { text: b.text };
-  if (b.type === "tool_use") return { functionCall: { name: b.name, id: b.id, args: b.input } };
+  // A signature, when present, must sit as a sibling of the block it came
+  // with — dropping it makes Gemini 3 reject the next tool-calling turn.
+  if (b.type === "text") {
+    return b.signature ? { text: b.text, thoughtSignature: b.signature } : { text: b.text };
+  }
+  if (b.type === "tool_use") {
+    const part: GeminiPart = { functionCall: { name: b.name, id: b.id, args: b.input } };
+    if (b.signature) part.thoughtSignature = b.signature;
+    return part;
+  }
   return { functionResponse: { name: b.name, id: b.tool_use_id, response: { content: b.content } } };
 }
 
@@ -56,10 +66,25 @@ function partToBlock(p: GeminiPart): LlmContentBlock | null {
       id: p.functionCall.id ?? `call_${syntheticId++}`,
       name: p.functionCall.name,
       input: p.functionCall.args ?? {},
+      signature: p.thoughtSignature,
     };
   }
-  if (typeof p.text === "string") return { type: "text", text: p.text };
+  if (typeof p.text === "string") {
+    return { type: "text", text: p.text, signature: p.thoughtSignature };
+  }
   return null;
+}
+
+/** 503 (overloaded) and 429 (rate limited) are transient on the free tier. */
+const RETRYABLE_STATUS = new Set([429, 503]);
+const MAX_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 700;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Drop the internal retry flag so callers see a plain Result. */
+function stripRetryable(r: Result<LlmResponse> & { retryable?: boolean }): Result<LlmResponse> {
+  return r.ok ? r : err(r.error);
 }
 
 /** LlmClientPort over Gemini's generateContent REST endpoint — no SDK dependency. */
@@ -72,6 +97,20 @@ export class GeminiRestClient implements LlmClientPort {
       return err(e instanceof Error ? e.message : "Asistente no configurado.");
     }
 
+    let last: Result<LlmResponse> = err("El asistente no respondió.");
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const res = await this.attempt(req, cfg);
+      if (res.ok || !res.retryable) return res.ok ? res : stripRetryable(res);
+      last = stripRetryable(res);
+      if (attempt < MAX_ATTEMPTS - 1) await sleep(RETRY_BASE_DELAY_MS * 2 ** attempt);
+    }
+    return last;
+  }
+
+  private async attempt(
+    req: LlmRequest,
+    cfg: { apiKey: string; model: string },
+  ): Promise<Result<LlmResponse> & { retryable?: boolean }> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
@@ -103,7 +142,11 @@ export class GeminiRestClient implements LlmClientPort {
 
       const body = (await res.json().catch(() => ({}))) as GeminiResponseBody;
       if (!res.ok) {
-        return err(body.error?.message ?? `La API de Gemini respondió HTTP ${res.status}.`);
+        const retryable = RETRYABLE_STATUS.has(res.status);
+        const message = retryable
+          ? "El asistente está saturado ahora mismo. Inténtalo de nuevo en un momento."
+          : (body.error?.message ?? `La API de Gemini respondió HTTP ${res.status}.`);
+        return { ...err(message), retryable };
       }
       if (body.promptFeedback?.blockReason) {
         return err(`Gemini bloqueó la respuesta (${body.promptFeedback.blockReason}).`);
@@ -119,7 +162,10 @@ export class GeminiRestClient implements LlmClientPort {
       if (e instanceof Error && e.name === "AbortError") {
         return err("El asistente tardó demasiado en responder (30s).");
       }
-      return err(e instanceof Error ? e.message : "Error de red hablando con el asistente.");
+      return {
+        ...err(e instanceof Error ? e.message : "Error de red hablando con el asistente."),
+        retryable: true,
+      };
     } finally {
       clearTimeout(timer);
     }
