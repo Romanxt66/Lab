@@ -14,6 +14,8 @@ export interface ChatReply {
   reply: string;
   /** Names of tools the assistant used to answer, for a small trust cue in the UI. */
   toolsUsed: string[];
+  /** Tool slug the client should navigate to, when the user asked to be taken somewhere. */
+  navigateTo?: string;
 }
 
 const MAX_HISTORY_MESSAGES = 20;

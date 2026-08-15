@@ -78,6 +78,7 @@ import { PrismaN8nConfigRepo } from "@/modules/n8n/infrastructure/prisma-n8n-con
 import { AssistantService } from "@/modules/assistant/application/assistant-service";
 import { buildAssistantTools } from "@/modules/assistant/application/tools";
 import { GeminiRestClient } from "@/modules/assistant/infrastructure/gemini-client";
+import { TOOLS, isToolVisible } from "@/modules/registry";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -312,7 +313,7 @@ export function getRegister(): RegisterUseCase {
 
 // --- Assistant ---------------------------------------------------------------
 
-export function getAssistantService(): AssistantService {
+export function getAssistantService(role: string): AssistantService {
   const tools = buildAssistantTools({
     finance: getFinanceService(),
     uptime: getUptimeService(),
@@ -320,6 +321,15 @@ export function getAssistantService(): AssistantService {
     calendar: getCalendarService(),
     inventory: getInventoryService(),
     automations: getAutomationService(),
+    dbAdmin: getDbAdminService(),
+    coolify: getCoolifyService(),
+    github: getGitHubService(),
+    n8n: getN8nService(),
+    // Only offer destinations this user can actually open, so the assistant
+    // never navigates a regular user into a superadmin-only page.
+    navigable: TOOLS.filter(
+      (t) => t.status === "ready" && isToolVisible(t, role),
+    ).map((t) => ({ slug: t.slug, name: t.name, description: t.description })),
   });
   return new AssistantService(new GeminiRestClient(), tools);
 }

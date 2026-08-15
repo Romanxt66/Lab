@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Send, X, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { sendAssistantMessageAction } from "@/modules/assistant/actions";
@@ -16,6 +17,7 @@ const GREETING =
 
 /** The floating avatar + chat panel. Mounted once in the authenticated app shell. */
 export function AssistantWidget() {
+  const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [messages, setMessages] = React.useState<UiMessage[]>([]);
   const [input, setInput] = React.useState("");
@@ -41,6 +43,8 @@ export function AssistantWidget() {
           ...prev,
           { role: "assistant", content: res.value.reply, toolsUsed: res.value.toolsUsed },
         ]);
+        // The assistant asked to open a tool page — take the user there.
+        if (res.value.navigateTo) router.push(`/tools/${res.value.navigateTo}`);
       } else {
         setMessages((prev) => [
           ...prev,

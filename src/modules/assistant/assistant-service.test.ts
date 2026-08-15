@@ -40,7 +40,7 @@ const throwingTool: AssistantTool = {
   },
 };
 
-const ctx: ToolContext = { uid: "u1", role: "user" };
+const ctx: Omit<ToolContext, "effects"> = { uid: "u1", role: "user" };
 
 describe("AssistantService.chat", () => {
   it("returns the model's text reply directly when no tool is used", async () => {

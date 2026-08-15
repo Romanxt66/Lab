@@ -6,13 +6,15 @@ import type {
   LlmMessage,
   LlmToolUseBlock,
 } from "./ports";
-import type { AssistantTool, ToolContext } from "./tools";
+import type { AssistantTool, ToolContext, ToolEffects } from "./tools";
 
 const MAX_TOOL_ROUNDS = 6;
 
 const SYSTEM_PROMPT = `Eres el asistente integrado de "Lab", un panel personal de herramientas y automatizaciones (finanzas, calendario, inventario, monitoreo de uptime, usuarios, automatizaciones). Respondes en español, de forma breve y directa.
 
-Usa las herramientas disponibles para responder con datos reales en vez de inventar cifras. Si necesitas un id (de cuenta, categoría, etc.) que no tienes, primero llama a la herramienta de listado correspondiente.
+Usa las herramientas disponibles para responder con datos reales en vez de inventar cifras. Si necesitas un id (de cuenta, categoría, aplicación, conexión, etc.) que no tienes, primero llama a la herramienta de listado correspondiente.
+
+Cuando el usuario pida ver, abrir o ir a una sección del Lab, usa navigate_to_module para llevarlo allí, y confírmalo en una frase corta.
 
 Antes de ejecutar una acción que modifique datos (crear, aprobar, rechazar, activar/desactivar algo), confirma en tu respuesta anterior qué vas a hacer exactamente, a menos que el usuario ya haya sido explícito e inequívoco. Después de ejecutar una acción, confirma claramente qué se hizo.
 
@@ -46,10 +48,14 @@ export class AssistantService {
   async chat(
     history: ChatMessage[],
     userMessage: string,
-    ctx: ToolContext,
+    session: Omit<ToolContext, "effects">,
   ): Promise<Result<ChatReply>> {
     const trimmed = trimHistory(history);
     if (!userMessage.trim()) return err("Escribe un mensaje.");
+
+    // Tools requesting a client-side effect (e.g. navigation) write here.
+    const effects: ToolEffects = {};
+    const ctx: ToolContext = { ...session, effects };
 
     const messages: LlmMessage[] = [
       ...trimmed.map((m) => ({ role: m.role, content: m.content })),
@@ -74,7 +80,11 @@ export class AssistantService {
 
       const { content, stopReason } = res.value;
       if (stopReason !== "tool_use") {
-        return ok({ reply: textOf(content) || "(sin respuesta)", toolsUsed });
+        return ok({
+          reply: textOf(content) || "(sin respuesta)",
+          toolsUsed,
+          navigateTo: effects.navigateTo,
+        });
       }
 
       messages.push({ role: "assistant", content });

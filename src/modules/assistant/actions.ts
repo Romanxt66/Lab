@@ -11,5 +11,8 @@ export async function sendAssistantMessageAction(
 ): Promise<Result<ChatReply>> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Tu sesión expiró. Vuelve a iniciar sesión." };
-  return getAssistantService().chat(history, message, { uid: user.uid, role: user.role });
+  return getAssistantService(user.role).chat(history, message, {
+    uid: user.uid,
+    role: user.role,
+  });
 }
