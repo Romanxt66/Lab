@@ -77,7 +77,7 @@ import { N8nRestAdapter } from "@/modules/n8n/infrastructure/n8n-rest-adapter";
 import { PrismaN8nConfigRepo } from "@/modules/n8n/infrastructure/prisma-n8n-config-repo";
 import { AssistantService } from "@/modules/assistant/application/assistant-service";
 import { buildAssistantTools } from "@/modules/assistant/application/tools";
-import { AnthropicRestClient } from "@/modules/assistant/infrastructure/anthropic-client";
+import { GeminiRestClient } from "@/modules/assistant/infrastructure/gemini-client";
 
 /**
  * Composition root — the ONLY place where use-cases are wired to concrete
@@ -321,5 +321,5 @@ export function getAssistantService(): AssistantService {
     inventory: getInventoryService(),
     automations: getAutomationService(),
   });
-  return new AssistantService(new AnthropicRestClient(), tools);
+  return new AssistantService(new GeminiRestClient(), tools);
 }

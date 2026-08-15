@@ -48,9 +48,11 @@ const schema = z.object({
    *  in Google Cloud Console, e.g. https://your-domain.com/api/auth/google/login/callback */
   GOOGLE_LOGIN_REDIRECT_URI: z.string().optional(),
 
-  // Assistant widget (chat over the Lab's own data via the Anthropic API).
-  ANTHROPIC_API_KEY: z.string().optional(),
-  ANTHROPIC_MODEL: z.string().default("claude-sonnet-5"),
+  // Assistant widget (chat over the Lab's own data via the Gemini API — free
+  // tier friendly). Get a key at https://aistudio.google.com/apikey
+  GEMINI_API_KEY: z.string().optional(),
+  /** "gemini-flash-latest" auto-tracks Google's current free-tier Flash model. */
+  GEMINI_MODEL: z.string().default("gemini-flash-latest"),
 
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -91,14 +93,14 @@ export function assertGoogleLoginOAuth() {
   return { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_LOGIN_REDIRECT_URI };
 }
 
-/** Throws if the assistant widget's Anthropic API key is missing. */
-export function assertAnthropicConfigured() {
-  if (!env.ANTHROPIC_API_KEY) {
+/** Throws if the assistant widget's Gemini API key is missing. */
+export function assertGeminiConfigured() {
+  if (!env.GEMINI_API_KEY) {
     throw new Error(
-      "El asistente no está configurado. Define ANTHROPIC_API_KEY en las variables de entorno.",
+      "El asistente no está configurado. Define GEMINI_API_KEY en las variables de entorno.",
     );
   }
-  return { apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL };
+  return { apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL };
 }
 
 /** Throws a friendly error if SMTP is not fully configured. */

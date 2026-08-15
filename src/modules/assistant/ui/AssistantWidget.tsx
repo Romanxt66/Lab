@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Send, X, Sparkles, Wrench } from "lucide-react";
+import { Send, X, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { sendAssistantMessageAction } from "@/modules/assistant/actions";
 import type { ChatMessage } from "@/modules/assistant/domain/chat";
@@ -20,6 +20,7 @@ export function AssistantWidget() {
   const [messages, setMessages] = React.useState<UiMessage[]>([]);
   const [input, setInput] = React.useState("");
   const [thinking, setThinking] = React.useState(false);
+  const [pressed, setPressed] = React.useState(false);
   const listRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -115,40 +116,90 @@ export function AssistantWidget() {
       ) : null}
 
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => !v);
+          setPressed(true);
+          window.setTimeout(() => setPressed(false), 400);
+        }}
         aria-label={open ? "Cerrar el asistente" : "Abrir el asistente"}
         aria-expanded={open}
         className="group flex size-14 items-center justify-center rounded-full shadow-lg transition-transform duration-200 [transition-timing-function:var(--ease-out)] hover:scale-105 active:scale-95"
       >
-        <Avatar size={56} thinking={thinking} bob={!open} />
+        <Avatar size={56} thinking={thinking} bob={!open} pressed={pressed} />
       </button>
     </div>
   );
 }
 
-/** The character: a rounded blob with two blinking eyes, in the app's accent gradient. */
-function Avatar({ size, thinking, bob }: { size: number; thinking: boolean; bob?: boolean }) {
+/**
+ * The character: an original blocky pixel-art robot (own design, in the
+ * app's accent gradient — not Anthropic's branding). Drawn as crisp SVG
+ * rects on a 10x9 grid, Atari-era sprite style: chunky pixels, no
+ * anti-aliasing, "steppy" (not eased) motion.
+ */
+function Avatar({
+  size,
+  thinking,
+  bob,
+  pressed,
+}: {
+  size: number;
+  thinking: boolean;
+  bob?: boolean;
+  pressed?: boolean;
+}) {
   return (
-    <div
-      className={cn("accent-grad relative flex items-center justify-center rounded-[38%] shadow-md", bob && "assistant-bob")}
+    <svg
+      viewBox="0 0 10 9"
+      shapeRendering="crispEdges"
+      className={cn(bob && "assistant-bob", pressed && "assistant-press", thinking && "assistant-thinking-glow")}
       style={{ width: size, height: size }}
+      role="img"
+      aria-label="Avatar del asistente"
     >
-      <div className="flex gap-[22%]" style={{ width: size * 0.5 }}>
-        <span
-          className={cn("assistant-blink block flex-1 rounded-full bg-white", thinking && "animate-pulse")}
-          style={{ aspectRatio: "1", height: size * 0.16 }}
-        />
-        <span
-          className={cn("assistant-blink block flex-1 rounded-full bg-white", thinking && "animate-pulse")}
-          style={{ aspectRatio: "1", height: size * 0.16, animationDelay: "120ms" }}
-        />
-      </div>
-      {thinking ? (
-        <span className="absolute -right-1 -bottom-1 flex size-5 items-center justify-center rounded-full bg-background shadow">
-          <Sparkles className="accent-text size-3" />
-        </span>
-      ) : null}
-    </div>
+      <defs>
+        <linearGradient id="assistant-body" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="var(--accent-1)" />
+          <stop offset="100%" stopColor="var(--accent-2)" />
+        </linearGradient>
+      </defs>
+
+      {/* Antenna stick + body silhouette. */}
+      <rect x="4" y="1" width="2" height="1" fill="url(#assistant-body)" />
+      <rect x="2" y="2" width="6" height="1" fill="url(#assistant-body)" />
+      <rect x="1" y="3" width="8" height="1" fill="url(#assistant-body)" />
+      <rect x="1" y="4" width="8" height="1" fill="url(#assistant-body)" />
+      <rect x="1" y="5" width="8" height="1" fill="url(#assistant-body)" />
+      <rect x="1" y="6" width="8" height="1" fill="url(#assistant-body)" />
+      <rect x="2" y="7" width="6" height="1" fill="url(#assistant-body)" />
+      <rect x="3" y="8" width="4" height="1" fill="url(#assistant-body)" />
+
+      {/* Antenna beacon light. */}
+      <rect className="assistant-antenna" x="4" y="0" width="2" height="1" fill="#fff" />
+
+      {/* Eyes. */}
+      <rect className="assistant-blink" x="2" y="4" width="2" height="1" fill="#fff" style={{ transformBox: "fill-box" }} />
+      <rect
+        className="assistant-blink"
+        x="6"
+        y="4"
+        width="2"
+        height="1"
+        fill="#fff"
+        style={{ transformBox: "fill-box", animationDelay: "120ms" }}
+      />
+
+      {/* Mouth: idle bar, flaps while thinking. */}
+      <rect
+        className={thinking ? "assistant-mouth-talk" : undefined}
+        x="3"
+        y="6"
+        width="4"
+        height="1"
+        fill="var(--background)"
+        style={{ transformBox: "fill-box" }}
+      />
+    </svg>
   );
 }
 

@@ -1,18 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { ok, err, type Result } from "@/shared/kernel/result";
 import { AssistantService } from "./application/assistant-service";
-import type {
-  AnthropicClientPort,
-  AnthropicRequest,
-  AnthropicResponse,
-} from "./application/ports";
+import type { LlmClientPort, LlmRequest, LlmResponse } from "./application/ports";
 import type { AssistantTool, ToolContext } from "./application/tools";
 
-class ScriptedClient implements AnthropicClientPort {
-  calls: AnthropicRequest[] = [];
+class ScriptedClient implements LlmClientPort {
+  calls: LlmRequest[] = [];
   private i = 0;
-  constructor(private readonly responses: Result<AnthropicResponse>[]) {}
-  async send(req: AnthropicRequest): Promise<Result<AnthropicResponse>> {
+  constructor(private readonly responses: Result<LlmResponse>[]) {}
+  async send(req: LlmRequest): Promise<Result<LlmResponse>> {
     this.calls.push(req);
     const res = this.responses[this.i];
     this.i++;
@@ -20,11 +16,11 @@ class ScriptedClient implements AnthropicClientPort {
   }
 }
 
-function textResponse(text: string): Result<AnthropicResponse> {
+function textResponse(text: string): Result<LlmResponse> {
   return ok({ content: [{ type: "text", text }], stopReason: "end_turn" });
 }
 
-function toolUseResponse(name: string, id: string, input: Record<string, unknown> = {}): Result<AnthropicResponse> {
+function toolUseResponse(name: string, id: string, input: Record<string, unknown> = {}): Result<LlmResponse> {
   return ok({ content: [{ type: "tool_use", id, name, input }], stopReason: "tool_use" });
 }
 
@@ -75,7 +71,7 @@ describe("AssistantService.chat", () => {
     const lastMsg = secondReq.messages.at(-1);
     expect(lastMsg?.role).toBe("user");
     expect(lastMsg?.content).toEqual([
-      { type: "tool_result", tool_use_id: "t1", content: 'echoed:{"a":1}' },
+      { type: "tool_result", tool_use_id: "t1", name: "echo", content: 'echoed:{"a":1}' },
     ]);
   });
 
@@ -89,7 +85,12 @@ describe("AssistantService.chat", () => {
     expect(res.ok).toBe(true);
     const lastMsg = client.calls[1].messages.at(-1);
     expect(lastMsg?.content).toEqual([
-      { type: "tool_result", tool_use_id: "t1", content: "Herramienta desconocida: does_not_exist" },
+      {
+        type: "tool_result",
+        tool_use_id: "t1",
+        name: "does_not_exist",
+        content: "Herramienta desconocida: does_not_exist",
+      },
     ]);
   });
 
@@ -100,7 +101,7 @@ describe("AssistantService.chat", () => {
     expect(res.ok).toBe(true);
     const lastMsg = client.calls[1].messages.at(-1);
     expect(lastMsg?.content).toEqual([
-      { type: "tool_result", tool_use_id: "t1", content: "Error interno: kaboom" },
+      { type: "tool_result", tool_use_id: "t1", name: "boom", content: "Error interno: kaboom" },
     ]);
   });
 

@@ -1,56 +1,56 @@
 import { type Result } from "@/shared/kernel/result";
 
 /**
- * Minimal shape of Anthropic's Messages API (only what the tool-use loop
- * needs) — kept here so the rest of the module never imports an SDK.
+ * Minimal, provider-neutral shape for a tool-use chat turn — modelled after
+ * Anthropic's Messages API blocks (the first provider this module used), but
+ * generic enough that any LLM adapter (Gemini, etc.) can translate to/from
+ * it without leaking its own wire format into the rest of the module.
  */
 
-export interface AnthropicTextBlock {
+export interface LlmTextBlock {
   type: "text";
   text: string;
 }
 
-export interface AnthropicToolUseBlock {
+export interface LlmToolUseBlock {
   type: "tool_use";
   id: string;
   name: string;
   input: Record<string, unknown>;
 }
 
-export interface AnthropicToolResultBlock {
+export interface LlmToolResultBlock {
   type: "tool_result";
   tool_use_id: string;
+  /** Some providers (Gemini) match tool results by name rather than id. */
+  name: string;
   content: string;
-  is_error?: boolean;
 }
 
-export type AnthropicContentBlock =
-  | AnthropicTextBlock
-  | AnthropicToolUseBlock
-  | AnthropicToolResultBlock;
+export type LlmContentBlock = LlmTextBlock | LlmToolUseBlock | LlmToolResultBlock;
 
-export interface AnthropicMessage {
+export interface LlmMessage {
   role: "user" | "assistant";
-  content: string | AnthropicContentBlock[];
+  content: string | LlmContentBlock[];
 }
 
-export interface AnthropicToolDef {
+export interface LlmToolDef {
   name: string;
   description: string;
   input_schema: object;
 }
 
-export interface AnthropicRequest {
+export interface LlmRequest {
   system: string;
-  messages: AnthropicMessage[];
-  tools: AnthropicToolDef[];
+  messages: LlmMessage[];
+  tools: LlmToolDef[];
 }
 
-export interface AnthropicResponse {
-  content: AnthropicContentBlock[];
+export interface LlmResponse {
+  content: LlmContentBlock[];
   stopReason: "end_turn" | "tool_use" | "max_tokens" | "stop_sequence" | string;
 }
 
-export interface AnthropicClientPort {
-  send(req: AnthropicRequest): Promise<Result<AnthropicResponse>>;
+export interface LlmClientPort {
+  send(req: LlmRequest): Promise<Result<LlmResponse>>;
 }

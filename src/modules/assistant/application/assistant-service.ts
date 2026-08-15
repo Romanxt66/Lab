@@ -1,10 +1,10 @@
 import { type Result, ok, err } from "@/shared/kernel/result";
 import { trimHistory, type ChatMessage, type ChatReply } from "@/modules/assistant/domain/chat";
 import type {
-  AnthropicClientPort,
-  AnthropicContentBlock,
-  AnthropicMessage,
-  AnthropicToolUseBlock,
+  LlmClientPort,
+  LlmContentBlock,
+  LlmMessage,
+  LlmToolUseBlock,
 } from "./ports";
 import type { AssistantTool, ToolContext } from "./tools";
 
@@ -18,27 +18,28 @@ Antes de ejecutar una acción que modifique datos (crear, aprobar, rechazar, act
 
 Si una herramienta devuelve un error de autorización, explícaselo al usuario sin rodeos — no lo intentes de otra forma.`;
 
-function isToolUse(b: AnthropicContentBlock): b is AnthropicToolUseBlock {
+function isToolUse(b: LlmContentBlock): b is LlmToolUseBlock {
   return b.type === "tool_use";
 }
 
-function textOf(content: AnthropicContentBlock[]): string {
+function textOf(content: LlmContentBlock[]): string {
   return content
-    .filter((b): b is Extract<AnthropicContentBlock, { type: "text" }> => b.type === "text")
+    .filter((b): b is Extract<LlmContentBlock, { type: "text" }> => b.type === "text")
     .map((b) => b.text)
     .join("\n")
     .trim();
 }
 
 /**
- * Runs the Anthropic tool-use loop: send the conversation, execute any
- * tool_use blocks the model asks for via the tool registry, feed the
- * results back, repeat until the model returns plain text (or the round
- * cap is hit, as a hard stop against a runaway loop).
+ * Runs the LLM tool-use loop: send the conversation, execute any tool_use
+ * blocks the model asks for via the tool registry, feed the results back,
+ * repeat until the model returns plain text (or the round cap is hit, as a
+ * hard stop against a runaway loop). Provider-agnostic — whatever adapter is
+ * injected as `client` does the wire-format translation.
  */
 export class AssistantService {
   constructor(
-    private readonly client: AnthropicClientPort,
+    private readonly client: LlmClientPort,
     private readonly tools: AssistantTool[],
   ) {}
 
@@ -50,7 +51,7 @@ export class AssistantService {
     const trimmed = trimHistory(history);
     if (!userMessage.trim()) return err("Escribe un mensaje.");
 
-    const messages: AnthropicMessage[] = [
+    const messages: LlmMessage[] = [
       ...trimmed.map((m) => ({ role: m.role, content: m.content })),
       { role: "user" as const, content: userMessage.trim() },
     ];
@@ -88,7 +89,7 @@ export class AssistantService {
               )
             : `Herramienta desconocida: ${block.name}`;
           if (tool) toolsUsed.push(tool.name);
-          return { id: block.id, text };
+          return { id: block.id, name: block.name, text };
         }),
       );
 
@@ -97,6 +98,7 @@ export class AssistantService {
         content: results.map((r) => ({
           type: "tool_result" as const,
           tool_use_id: r.id,
+          name: r.name,
           content: r.text,
         })),
       });

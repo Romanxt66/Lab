@@ -424,18 +424,19 @@ body::after {
   animation: page-in 0.3s var(--ease-out-expo) both;
 }
 
-/* --- Assistant widget --------------------------------------------------- */
+/* --- Assistant widget (pixel-art avatar, deliberately "steppy" motion to
+ * read as retro/8-bit rather than smooth analog easing). -------------------- */
 @keyframes assistant-bob {
   0%,
   100% {
-    transform: translateY(0) rotate(0deg);
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(-5px) rotate(-2deg);
+    transform: translateY(-4px);
   }
 }
 .assistant-bob {
-  animation: assistant-bob 3.4s var(--ease-in-out) infinite;
+  animation: assistant-bob 1.6s steps(6) infinite;
 }
 
 @keyframes assistant-blink {
@@ -449,8 +450,77 @@ body::after {
   }
 }
 .assistant-blink {
-  animation: assistant-blink 4.6s ease-in-out infinite;
+  animation: assistant-blink 4.6s steps(1) infinite;
   transform-origin: center;
+}
+
+/* Antenna beacon: a blinking "power light", classic retro-robot detail. */
+@keyframes assistant-antenna {
+  0%,
+  40%,
+  100% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 0.2;
+  }
+}
+.assistant-antenna {
+  animation: assistant-antenna 2.4s steps(1) infinite;
+}
+
+/* Mouth flaps open/closed while a reply is being generated. */
+@keyframes assistant-mouth-talk {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  25% {
+    transform: scaleX(0.45);
+  }
+  50% {
+    transform: scaleX(0.9);
+  }
+  75% {
+    transform: scaleX(0.3);
+  }
+}
+.assistant-mouth-talk {
+  animation: assistant-mouth-talk 0.5s steps(2) infinite;
+  transform-origin: center;
+}
+
+/* Retro palette-cycle flash, reserved for the "thinking" state. */
+@keyframes assistant-thinking-glow {
+  0%,
+  100% {
+    filter: hue-rotate(0deg) saturate(1);
+  }
+  50% {
+    filter: hue-rotate(30deg) saturate(1.4);
+  }
+}
+.assistant-thinking-glow {
+  animation: assistant-thinking-glow 0.9s steps(3) infinite;
+}
+
+/* One-shot squash-and-stretch "press" bounce when the launcher is clicked. */
+@keyframes assistant-press {
+  0% {
+    transform: scale(1, 1);
+  }
+  35% {
+    transform: scale(1.18, 0.82);
+  }
+  70% {
+    transform: scale(0.92, 1.1);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+.assistant-press {
+  animation: assistant-press 0.4s var(--ease-out-expo);
 }
 
 @keyframes assistant-think-dot {
