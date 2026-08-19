@@ -24,6 +24,10 @@ import {
   type CoolifyResource,
   type CoolifyServer,
 } from "@/modules/coolify/domain/resource";
+import {
+  formatApiError,
+  type CoolifyErrorBody,
+} from "@/modules/coolify/domain/api-error";
 
 const TIMEOUT_MS = 20_000;
 
@@ -33,20 +37,13 @@ function str(v: unknown): string | null {
 
 /** Turn a non-2xx response into a friendly, localised error. */
 async function toError(res: Response): Promise<string> {
-  if (res.status === 401 || res.status === 403) {
-    return "Token inválido o sin permisos. Revisa tu API token de Coolify.";
-  }
-  if (res.status === 404) {
-    return "No encontrado en Coolify (¿existe el recurso?).";
-  }
-  let detail = `HTTP ${res.status}`;
+  let body: CoolifyErrorBody | null = null;
   try {
-    const body = (await res.json()) as { message?: string; error?: string };
-    detail = body?.message || body?.error || detail;
+    body = (await res.json()) as CoolifyErrorBody;
   } catch {
-    /* ignore */
+    /* non-JSON body — fall back to the status code */
   }
-  return `Coolify: ${detail}`;
+  return formatApiError(res.status, body);
 }
 
 /** CoolifyClientPort over the REST API (v1), with Bearer auth and a timeout. */
@@ -170,8 +167,11 @@ export class CoolifyRestAdapter implements CoolifyClientPort {
     };
     if (input.name.trim()) common.name = input.name.trim();
     if (input.domains.trim()) common.domains = input.domains.trim();
-    if (input.portsExposes.trim()) common.ports_exposes = input.portsExposes.trim();
     if (input.baseDirectory.trim()) common.base_directory = `/${input.baseDirectory.trim().replace(/^\/+/, "")}`;
+    // ports_exposes is REQUIRED by Coolify for both endpoints — omitting it
+    // when blank is what produces a bare "Validation failed.", so always send
+    // it, falling back to the same default the dialog starts with.
+    common.ports_exposes = input.portsExposes.trim() || "3000";
 
     const path =
       input.source === "dockerfile"
