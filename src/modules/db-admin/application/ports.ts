@@ -4,6 +4,8 @@ import type {
   SchemaInfo,
   TableInfo,
   ColumnInfo,
+  ForeignKeyInfo,
+  IndexInfo,
 } from "@/modules/db-admin/domain/schema-info";
 
 export interface DbConnectionRepoPort {
@@ -41,9 +43,19 @@ export interface SqlExecutorPort {
     sql: string,
     options?: { readOnly?: boolean },
   ): Promise<Result<QueryResult>>;
+  /**
+   * Run a statement with bound parameters. Row browsing and the row editor use
+   * this so values never reach the SQL text (see domain/row-sql.ts).
+   */
+  runParameterized(
+    connectionUrl: string,
+    sql: string,
+    values: unknown[],
+    options?: { readOnly?: boolean },
+  ): Promise<Result<QueryResult>>;
 }
 
-/** Reads structural metadata (schemas / tables / columns). */
+/** Reads structural metadata (schemas / tables / columns / keys / indexes). */
 export interface IntrospectionPort {
   listSchemas(connectionUrl: string): Promise<Result<SchemaInfo[]>>;
   listTables(
@@ -55,4 +67,14 @@ export interface IntrospectionPort {
     schema: string,
     table: string,
   ): Promise<Result<ColumnInfo[]>>;
+  /** Every FK in a schema — powers both the diagram and the structure tab. */
+  listForeignKeys(
+    connectionUrl: string,
+    schema: string,
+  ): Promise<Result<ForeignKeyInfo[]>>;
+  listIndexes(
+    connectionUrl: string,
+    schema: string,
+    table: string,
+  ): Promise<Result<IndexInfo[]>>;
 }

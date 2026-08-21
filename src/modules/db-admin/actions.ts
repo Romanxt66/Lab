@@ -13,7 +13,11 @@ import type {
   SchemaInfo,
   TableInfo,
   ColumnInfo,
+  TableDetail,
+  SchemaDiagram,
 } from "@/modules/db-admin/domain/schema-info";
+import type { BrowseResult } from "@/modules/db-admin/application/db-admin-service";
+import type { SortDirection } from "@/modules/db-admin/domain/row-sql";
 import { analyzeSql } from "@/modules/db-admin/domain/sql-analysis";
 
 // --- Connections -----------------------------------------------------------
@@ -64,6 +68,65 @@ export async function listColumnsAction(
   table: string,
 ): Promise<Result<ColumnInfo[]>> {
   return getDbAdminService().listColumns(id, schema, table);
+}
+
+export async function tableDetailAction(
+  id: string,
+  schema: string,
+  table: string,
+): Promise<Result<TableDetail>> {
+  return getDbAdminService().tableDetail(id, schema, table);
+}
+
+export async function schemaDiagramAction(
+  id: string,
+  schema: string,
+): Promise<Result<SchemaDiagram>> {
+  return getDbAdminService().schemaDiagram(id, schema);
+}
+
+// --- Row browsing & editing -------------------------------------------------
+
+export async function browseRowsAction(
+  id: string,
+  schema: string,
+  table: string,
+  opts: {
+    limit?: number;
+    offset?: number;
+    orderBy?: string | null;
+    direction?: SortDirection;
+  } = {},
+): Promise<Result<BrowseResult>> {
+  return getDbAdminService().browseRows(id, schema, table, opts);
+}
+
+export async function insertRowAction(
+  id: string,
+  schema: string,
+  table: string,
+  values: Record<string, unknown>,
+): Promise<Result<QueryResult>> {
+  return getDbAdminService().insertRow(id, schema, table, values);
+}
+
+export async function updateRowAction(
+  id: string,
+  schema: string,
+  table: string,
+  values: Record<string, unknown>,
+  key: Record<string, unknown>,
+): Promise<Result<QueryResult>> {
+  return getDbAdminService().updateRow(id, schema, table, values, key);
+}
+
+export async function deleteRowAction(
+  id: string,
+  schema: string,
+  table: string,
+  key: Record<string, unknown>,
+): Promise<Result<QueryResult>> {
+  return getDbAdminService().deleteRow(id, schema, table, key);
 }
 
 // --- Query -----------------------------------------------------------------

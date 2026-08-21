@@ -20,9 +20,27 @@ export class PgExecutor implements SqlExecutorPort {
     });
   }
 
-  async runQuery(
+  runQuery(
     connectionUrl: string,
     sql: string,
+    options: { readOnly?: boolean } = {},
+  ): Promise<Result<QueryResult>> {
+    return this.execute(connectionUrl, sql, undefined, options);
+  }
+
+  runParameterized(
+    connectionUrl: string,
+    sql: string,
+    values: unknown[],
+    options: { readOnly?: boolean } = {},
+  ): Promise<Result<QueryResult>> {
+    return this.execute(connectionUrl, sql, values, options);
+  }
+
+  private async execute(
+    connectionUrl: string,
+    sql: string,
+    values: unknown[] | undefined,
     options: { readOnly?: boolean } = {},
   ): Promise<Result<QueryResult>> {
     return this.withClient(connectionUrl, async (client) => {
@@ -33,7 +51,7 @@ export class PgExecutor implements SqlExecutorPort {
       }
       const started = performance.now();
       try {
-        const res = await client.query({ text: sql, rowMode: "array" });
+        const res = await client.query({ text: sql, values, rowMode: "array" });
         const durationMs = Math.round(performance.now() - started);
         if (options.readOnly) await client.query("COMMIT");
         const columns = res.fields.map((f) => f.name);

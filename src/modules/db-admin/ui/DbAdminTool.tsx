@@ -13,8 +13,12 @@ import {
   ShieldAlert,
   CheckCircle2,
   ChevronRight,
-  Key,
   Server,
+  Rows3,
+  Columns3,
+  Workflow,
+  Terminal,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,17 +33,18 @@ import {
   testConnectionAction,
   listSchemasAction,
   listTablesAction,
-  listColumnsAction,
   runQueryAction,
 } from "@/modules/db-admin/actions";
 import type { DbConnectionDTO } from "@/modules/db-admin/domain/connection";
 import type {
   SchemaInfo,
   TableInfo,
-  ColumnInfo,
 } from "@/modules/db-admin/domain/schema-info";
 import type { QueryResult } from "@/modules/db-admin/application/ports";
 import { analyzeSql } from "@/modules/db-admin/domain/sql-analysis";
+import { TableBrowser } from "./TableBrowser";
+import { TableStructure } from "./TableStructure";
+import { SchemaDiagram } from "./SchemaDiagram";
 
 export function DbAdminTool() {
   const [connections, setConnections] = React.useState<DbConnectionDTO[]>([]);
@@ -274,6 +279,18 @@ function ConnectionWorkspace({
     sql: string;
     reason: string;
   } | null>(null);
+  /** Table currently open in the Datos / Estructura tabs. */
+  const [selected, setSelected] = React.useState<{ schema: string; table: string } | null>(null);
+  /** Schema the diagram is drawn for — follows whichever schema is expanded. */
+  const [activeSchema, setActiveSchema] = React.useState<string | null>(null);
+  const [tab, setTab] = React.useState<TabId>("data");
+
+  function pickTable(schema: string, table: string) {
+    setSelected({ schema, table });
+    setActiveSchema(schema);
+    // Jump to the data view — that's what clicking a table implies.
+    setTab((t) => (t === "diagram" || t === "sql" ? "data" : t));
+  }
 
   const analysis = React.useMemo(() => analyzeSql(sql), [sql]);
 
@@ -360,14 +377,64 @@ function ConnectionWorkspace({
         </div>
       </div>
 
-      {/* Schema explorer + editor */}
+      {/* Schema explorer + tabbed workspace */}
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <SchemaExplorer
           connectionId={connection.id}
           onQuery={insertQuery}
+          onSelectTable={pickTable}
+          onSchemaOpen={setActiveSchema}
+          selected={selected}
         />
 
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
+          <TabBar
+            active={tab}
+            onChange={setTab}
+            selectedLabel={selected ? `${selected.schema}.${selected.table}` : null}
+          />
+
+          {tab === "data" ? (
+            selected ? (
+              <TableBrowser
+                key={`${selected.schema}.${selected.table}`}
+                connectionId={connection.id}
+                readOnly={connection.readOnly}
+                schema={selected.schema}
+                table={selected.table}
+              />
+            ) : (
+              <PickATable />
+            )
+          ) : null}
+
+          {tab === "structure" ? (
+            selected ? (
+              <TableStructure
+                key={`${selected.schema}.${selected.table}`}
+                connectionId={connection.id}
+                schema={selected.schema}
+                table={selected.table}
+              />
+            ) : (
+              <PickATable />
+            )
+          ) : null}
+
+          {tab === "diagram" ? (
+            activeSchema ? (
+              <SchemaDiagram
+                key={activeSchema}
+                connectionId={connection.id}
+                schema={activeSchema}
+                onPickTable={(table) => pickTable(activeSchema, table)}
+              />
+            ) : (
+              <PickATable message="Abre un esquema en el panel de la izquierda para ver su diagrama." />
+            )
+          ) : null}
+
+          <div className={cn("space-y-3", tab !== "sql" && "hidden")}>
           <div className="glass rounded-lg border border-border/60 p-3">
             <div className="mb-2 flex items-center justify-between">
               <Label htmlFor="sql" className="text-xs font-medium">
@@ -433,8 +500,67 @@ function ConnectionWorkspace({
           ) : null}
 
           {result ? <ResultGrid result={result} /> : null}
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Workspace tabs
+// ---------------------------------------------------------------------------
+
+type TabId = "data" | "structure" | "diagram" | "sql";
+
+const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
+  { id: "data", label: "Datos", icon: Rows3 },
+  { id: "structure", label: "Estructura", icon: Columns3 },
+  { id: "diagram", label: "Diagrama", icon: Workflow },
+  { id: "sql", label: "SQL", icon: Terminal },
+];
+
+function TabBar({
+  active,
+  onChange,
+  selectedLabel,
+}: {
+  active: TabId;
+  onChange: (t: TabId) => void;
+  selectedLabel: string | null;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60">
+      <div className="flex items-center gap-0.5">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => onChange(id)}
+            className={cn(
+              "-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm transition-colors",
+              active === id
+                ? "border-foreground font-medium text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Icon className="size-3.5" />
+            {label}
+          </button>
+        ))}
+      </div>
+      {selectedLabel ? (
+        <span className="truncate pb-1.5 font-mono text-xs text-muted-foreground">
+          {selectedLabel}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function PickATable({ message }: { message?: string }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border p-14 text-center text-sm text-muted-foreground">
+      {message ?? "Elige una tabla en el panel de la izquierda."}
     </div>
   );
 }
@@ -486,9 +612,15 @@ function ConfirmDestructiveBanner({
 function SchemaExplorer({
   connectionId,
   onQuery,
+  onSelectTable,
+  onSchemaOpen,
+  selected,
 }: {
   connectionId: string;
   onQuery: (sql: string) => void;
+  onSelectTable: (schema: string, table: string) => void;
+  onSchemaOpen: (schema: string | null) => void;
+  selected: { schema: string; table: string } | null;
 }) {
   const [schemas, setSchemas] = React.useState<SchemaInfo[] | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -555,7 +687,11 @@ function SchemaExplorer({
             <li key={s.name}>
               <button
                 onClick={() =>
-                  setOpenSchema((cur) => (cur === s.name ? null : s.name))
+                  setOpenSchema((cur) => {
+                    const next = cur === s.name ? null : s.name;
+                    onSchemaOpen(next);
+                    return next;
+                  })
                 }
                 className={cn(
                   "flex w-full items-center gap-1 rounded px-1.5 py-1 text-left text-xs transition-colors",
@@ -578,6 +714,8 @@ function SchemaExplorer({
                   connectionId={connectionId}
                   schema={s.name}
                   onQuery={onQuery}
+                  onSelectTable={onSelectTable}
+                  selectedTable={selected?.schema === s.name ? selected.table : null}
                 />
               ) : null}
             </li>
@@ -592,14 +730,18 @@ function TableList({
   connectionId,
   schema,
   onQuery,
+  onSelectTable,
+  selectedTable,
 }: {
   connectionId: string;
   schema: string;
   onQuery: (sql: string) => void;
+  onSelectTable: (schema: string, table: string) => void;
+  selectedTable: string | null;
 }) {
   const [tables, setTables] = React.useState<TableInfo[] | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const [openTable, setOpenTable] = React.useState<string | null>(null);
+  const [filter, setFilter] = React.useState("");
 
   React.useEffect(() => {
     let live = true;
@@ -622,29 +764,45 @@ function TableList({
     };
   }, [connectionId, schema]);
 
+  const visible = (tables ?? []).filter((t) =>
+    t.name.toLowerCase().includes(filter.trim().toLowerCase()),
+  );
+
   return (
     <div className="ml-3 mt-0.5 border-l border-border/70 pl-2">
+      {tables && tables.length > 8 ? (
+        <input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Filtrar tablas…"
+          className="mb-1 h-6 w-full rounded border border-input bg-transparent px-1.5 text-[11px] outline-none focus-visible:border-ring"
+        />
+      ) : null}
+
       {error ? (
         <p className="py-1 text-[10px] text-danger">{error}</p>
       ) : tables === null ? (
         <p className="py-1 text-[10px] text-muted-foreground">Cargando…</p>
       ) : tables.length === 0 ? (
         <p className="py-1 text-[10px] text-muted-foreground">Sin tablas.</p>
+      ) : visible.length === 0 ? (
+        <p className="py-1 text-[10px] text-muted-foreground">Sin coincidencias.</p>
       ) : (
         <ul className="space-y-0.5">
-          {tables.map((t) => (
+          {visible.map((t) => (
             <li key={t.name}>
               <div
                 className={cn(
                   "group flex items-center gap-1 rounded px-1 py-0.5 text-xs transition-colors",
-                  openTable === t.name && "bg-foreground/5",
+                  selectedTable === t.name
+                    ? "bg-foreground/10 font-medium"
+                    : "hover:bg-foreground/5",
                 )}
               >
                 <button
-                  onClick={() =>
-                    setOpenTable((cur) => (cur === t.name ? null : t.name))
-                  }
+                  onClick={() => onSelectTable(schema, t.name)}
                   className="flex min-w-0 flex-1 items-center gap-1 text-left hover:text-foreground"
+                  title="Abrir la tabla"
                 >
                   <TableIcon className="size-3 shrink-0 text-muted-foreground" />
                   <span className="truncate" title={t.name}>
@@ -668,86 +826,6 @@ function TableList({
                   SQL
                 </button>
               </div>
-              {openTable === t.name ? (
-                <ColumnList
-                  connectionId={connectionId}
-                  schema={schema}
-                  table={t.name}
-                />
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function ColumnList({
-  connectionId,
-  schema,
-  table,
-}: {
-  connectionId: string;
-  schema: string;
-  table: string;
-}) {
-  const [columns, setColumns] = React.useState<ColumnInfo[] | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    let live = true;
-    // Reset is deferred so it isn't a synchronous setState in the effect.
-    queueMicrotask(() => {
-      if (!live) return;
-      setError(null);
-      setColumns(null);
-    });
-    void listColumnsAction(connectionId, schema, table).then((r) => {
-      if (!live) return;
-      if (r.ok) setColumns(r.value);
-      else {
-        setError(r.error);
-        setColumns([]);
-      }
-    });
-    return () => {
-      live = false;
-    };
-  }, [connectionId, schema, table]);
-
-  return (
-    <div className="ml-3 mt-0.5 border-l border-border/70 pl-2">
-      {error ? (
-        <p className="py-1 text-[10px] text-danger">{error}</p>
-      ) : columns === null ? (
-        <p className="py-1 text-[10px] text-muted-foreground">Cargando…</p>
-      ) : (
-        <ul className="space-y-0.5">
-          {columns.map((c) => (
-            <li
-              key={c.name}
-              className="flex items-center gap-1 px-1 py-0.5 text-[10px]"
-              title={`${c.dataType}${c.isNullable ? " · nullable" : ""}${
-                c.default ? " · default " + c.default : ""
-              }`}
-            >
-              {c.isPrimaryKey ? (
-                <Key className="size-2.5 shrink-0 text-foreground" />
-              ) : (
-                <span className="size-2.5 shrink-0" />
-              )}
-              <span
-                className={cn(
-                  "truncate",
-                  c.isPrimaryKey ? "font-medium text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {c.name}
-              </span>
-              <span className="ml-auto shrink-0 font-mono text-muted-foreground">
-                {c.dataType}
-              </span>
             </li>
           ))}
         </ul>

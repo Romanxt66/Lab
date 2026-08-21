@@ -6,6 +6,8 @@ import type {
   SchemaInfo,
   TableInfo,
   ColumnInfo,
+  ForeignKeyInfo,
+  IndexInfo,
 } from "@/modules/db-admin/domain/schema-info";
 
 const SYSTEM_SCHEMAS = new Set([
@@ -102,6 +104,94 @@ export class PgIntrospection implements IntrospectionPort {
           isPrimaryKey: r.is_primary,
           default: r.column_default,
           ordinalPosition: r.ordinal_position,
+        })),
+      );
+    });
+  }
+
+  /**
+   * All FK constraints in a schema. `conkey`/`confkey` are column-number
+   * arrays, unnested with ordinality so composite keys keep their pairing.
+   */
+  async listForeignKeys(url: string, schema: string): Promise<Result<ForeignKeyInfo[]>> {
+    return this.withClient(url, async (client) => {
+      const res = await client.query<{
+        constraint_name: string;
+        table_schema: string;
+        table_name: string;
+        columns: string[];
+        ref_schema: string;
+        ref_table: string;
+        ref_columns: string[];
+      }>(
+        `SELECT con.conname                AS constraint_name,
+                nsp.nspname                AS table_schema,
+                rel.relname                AS table_name,
+                ARRAY(
+                  SELECT att.attname
+                    FROM unnest(con.conkey) WITH ORDINALITY AS k(attnum, ord)
+                    JOIN pg_attribute att
+                      ON att.attrelid = con.conrelid AND att.attnum = k.attnum
+                   ORDER BY k.ord
+                )                          AS columns,
+                fnsp.nspname               AS ref_schema,
+                frel.relname               AS ref_table,
+                ARRAY(
+                  SELECT fatt.attname
+                    FROM unnest(con.confkey) WITH ORDINALITY AS fk(attnum, ord)
+                    JOIN pg_attribute fatt
+                      ON fatt.attrelid = con.confrelid AND fatt.attnum = fk.attnum
+                   ORDER BY fk.ord
+                )                          AS ref_columns
+           FROM pg_constraint con
+           JOIN pg_class rel      ON rel.oid = con.conrelid
+           JOIN pg_namespace nsp  ON nsp.oid = rel.relnamespace
+           JOIN pg_class frel     ON frel.oid = con.confrelid
+           JOIN pg_namespace fnsp ON fnsp.oid = frel.relnamespace
+          WHERE con.contype = 'f' AND nsp.nspname = $1
+          ORDER BY rel.relname, con.conname`,
+        [schema],
+      );
+      return ok(
+        res.rows.map((r) => ({
+          constraintName: r.constraint_name,
+          schema: r.table_schema,
+          table: r.table_name,
+          columns: r.columns ?? [],
+          refSchema: r.ref_schema,
+          refTable: r.ref_table,
+          refColumns: r.ref_columns ?? [],
+        })),
+      );
+    });
+  }
+
+  async listIndexes(url: string, schema: string, table: string): Promise<Result<IndexInfo[]>> {
+    return this.withClient(url, async (client) => {
+      const res = await client.query<{
+        indexname: string;
+        indexdef: string;
+        is_unique: boolean;
+        is_primary: boolean;
+      }>(
+        `SELECT i.relname AS indexname,
+                pg_get_indexdef(i.oid) AS indexdef,
+                idx.indisunique  AS is_unique,
+                idx.indisprimary AS is_primary
+           FROM pg_index idx
+           JOIN pg_class i   ON i.oid = idx.indexrelid
+           JOIN pg_class t   ON t.oid = idx.indrelid
+           JOIN pg_namespace n ON n.oid = t.relnamespace
+          WHERE n.nspname = $1 AND t.relname = $2
+          ORDER BY idx.indisprimary DESC, i.relname`,
+        [schema, table],
+      );
+      return ok(
+        res.rows.map((r) => ({
+          name: r.indexname,
+          definition: r.indexdef,
+          isUnique: r.is_unique,
+          isPrimary: r.is_primary,
         })),
       );
     });
