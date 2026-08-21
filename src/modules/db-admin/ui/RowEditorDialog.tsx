@@ -14,6 +14,14 @@ import type { ColumnInfo } from "@/modules/db-admin/domain/schema-info";
  * types on save — a NULL checkbox is offered separately so "empty string" and
  * NULL stay distinguishable, which matters for nullable columns.
  */
+export type RowEditorMode = "insert" | "edit" | "duplicate";
+
+const TITLES: Record<RowEditorMode, string> = {
+  insert: "Nueva fila",
+  edit: "Editar fila",
+  duplicate: "Duplicar fila",
+};
+
 export function RowEditorDialog({
   mode,
   table,
@@ -24,10 +32,10 @@ export function RowEditorDialog({
   onCancel,
   onSave,
 }: {
-  mode: "insert" | "edit";
+  mode: RowEditorMode;
   table: string;
   columns: ColumnInfo[];
-  /** Current values, keyed by column name (edit mode). */
+  /** Current values, keyed by column name (edit / duplicate). */
   initial?: Record<string, unknown>;
   saving: boolean;
   error: string | null;
@@ -57,7 +65,8 @@ export function RowEditorDialog({
     const values: Record<string, unknown> = {};
     for (const c of columns) {
       if (mode === "insert" && !touched.has(c.name) && !nulls.has(c.name)) {
-        // Untouched on insert → omit entirely, letting DEFAULT / serial apply.
+        // Untouched on a blank insert → omit entirely, letting DEFAULT /
+        // serial apply. A duplicate keeps its prefilled values instead.
         continue;
       }
       values[c.name] = nulls.has(c.name) ? null : coerce(fields[c.name] ?? "");
@@ -76,9 +85,7 @@ export function RowEditorDialog({
       >
         <header className="flex items-center justify-between border-b border-border/60 px-5 py-3.5">
           <div className="min-w-0">
-            <h3 className="truncate font-medium">
-              {mode === "insert" ? "Nueva fila" : "Editar fila"}
-            </h3>
+            <h3 className="truncate font-medium">{TITLES[mode]}</h3>
             <p className="truncate font-mono text-xs text-muted-foreground">{table}</p>
           </div>
           <button

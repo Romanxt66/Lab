@@ -6,12 +6,16 @@ import {
   Plus,
   Pencil,
   Trash2,
+  Copy,
+  CopyPlus,
+  Check,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
   ArrowUp,
   ArrowDown,
   Lock,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorNote } from "@/modules/dev-utils/ui/shared";
@@ -25,7 +29,7 @@ import {
 } from "@/modules/db-admin/actions";
 import type { ColumnInfo } from "@/modules/db-admin/domain/schema-info";
 import type { SortDirection } from "@/modules/db-admin/domain/row-sql";
-import { RowEditorDialog } from "./RowEditorDialog";
+import { RowEditorDialog, type RowEditorMode } from "./RowEditorDialog";
 
 const PAGE_SIZE = 50;
 
@@ -36,7 +40,11 @@ interface Props {
   table: string;
 }
 
-/** Paginated data grid for one table, with add / edit / delete row actions. */
+/**
+ * Paginated data grid for one table. Clicking a row selects it and reveals an
+ * action bar (edit / duplicate / copy / delete) — more discoverable than
+ * hover-only icons, and it gives the destructive action a deliberate target.
+ */
 export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
   const [columns, setColumns] = React.useState<ColumnInfo[]>([]);
   const [gridColumns, setGridColumns] = React.useState<string[]>([]);
@@ -48,24 +56,31 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const [editing, setEditing] = React.useState<
-    { mode: "insert" } | { mode: "edit"; row: unknown[] } | null
-  >(null);
+  /** Index into `rows` of the highlighted row, if any. */
+  const [selectedRow, setSelectedRow] = React.useState<number | null>(null);
+  const [editing, setEditing] = React.useState<{
+    mode: RowEditorMode;
+    initial?: Record<string, unknown>;
+    key?: Record<string, unknown>;
+  } | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [dialogError, setDialogError] = React.useState<string | null>(null);
-  const [busyRow, setBusyRow] = React.useState<number | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
 
   const pkColumns = React.useMemo(
     () => columns.filter((c) => c.isPrimaryKey).map((c) => c.name),
     [columns],
   );
   const canMutate = !readOnly;
-  const canEditRows = canMutate && pkColumns.length > 0;
+  /** Editing or deleting needs a primary key to target exactly one row. */
+  const canTargetRow = canMutate && pkColumns.length > 0;
 
   const load = React.useCallback(
     async (nextPage: number, sort: { by: string | null; dir: SortDirection }) => {
       setLoading(true);
       setError(null);
+      setSelectedRow(null); // row indexes shift when the page or order changes
       try {
         const res = await browseRowsAction(connectionId, schema, table, {
           limit: PAGE_SIZE,
@@ -102,13 +117,21 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
         const detail = await tableDetailAction(connectionId, schema, table);
         setColumns(detail.ok ? detail.value.columns : []);
       } catch {
-        // Structure is only needed for the PK-aware edit/delete buttons; the
-        // grid itself still works without it, so don't block on this.
+        // Structure only powers the PK-aware actions; the grid still works.
         setColumns([]);
       }
       await load(0, { by: null, dir: "asc" });
     })();
   }, [connectionId, schema, table, load]);
+
+  // Escape clears the selection.
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !editing) setSelectedRow(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editing]);
 
   function toggleSort(column: string) {
     const nextDir: SortDirection =
@@ -140,13 +163,49 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
     return out;
   }
 
+  function openEdit() {
+    if (selectedRow === null) return;
+    setDialogError(null);
+    setEditing({
+      mode: "edit",
+      initial: rowToRecord(rows[selectedRow]),
+      key: keyOf(rows[selectedRow]),
+    });
+  }
+
+  function openDuplicate() {
+    if (selectedRow === null) return;
+    const record = rowToRecord(rows[selectedRow]);
+    // Drop auto-generated primary keys (serial / uuid default) so the database
+    // mints fresh ones instead of colliding with the row being copied.
+    for (const c of columns) {
+      if (c.isPrimaryKey && c.default) delete record[c.name];
+    }
+    setDialogError(null);
+    setEditing({ mode: "duplicate", initial: record });
+  }
+
+  async function copySelected() {
+    if (selectedRow === null) return;
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(rowToRecord(rows[selectedRow]), null, 2),
+      );
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setError("El navegador bloqueó el acceso al portapapeles.");
+    }
+  }
+
   async function saveRow(values: Record<string, unknown>) {
+    if (!editing) return;
     setSaving(true);
     setDialogError(null);
     try {
       const res =
-        editing?.mode === "edit"
-          ? await updateRowAction(connectionId, schema, table, values, keyOf(editing.row))
+        editing.mode === "edit" && editing.key
+          ? await updateRowAction(connectionId, schema, table, values, editing.key)
           : await insertRowAction(connectionId, schema, table, values);
       if (res.ok) {
         setEditing(null);
@@ -161,17 +220,23 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
     }
   }
 
-  async function removeRow(row: unknown[], index: number) {
+  async function deleteSelected() {
+    if (selectedRow === null) return;
     if (!confirm("¿Eliminar esta fila? No se puede deshacer.")) return;
-    setBusyRow(index);
+    setDeleting(true);
     try {
-      const res = await deleteRowAction(connectionId, schema, table, keyOf(row));
+      const res = await deleteRowAction(
+        connectionId,
+        schema,
+        table,
+        keyOf(rows[selectedRow]),
+      );
       if (res.ok) await load(page, { by: orderBy, dir: direction });
       else setError(res.error);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo eliminar la fila.");
     } finally {
-      setBusyRow(null);
+      setDeleting(false);
     }
   }
 
@@ -200,7 +265,13 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
             Actualizar
           </Button>
           {canMutate ? (
-            <Button size="sm" onClick={() => { setDialogError(null); setEditing({ mode: "insert" }); }}>
+            <Button
+              size="sm"
+              onClick={() => {
+                setDialogError(null);
+                setEditing({ mode: "insert" });
+              }}
+            >
               <Plus className="size-3.5" />
               Nueva fila
             </Button>
@@ -210,11 +281,61 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
 
       {error ? <ErrorNote>{error}</ErrorNote> : null}
 
-      {canMutate && !canEditRows && rows.length > 0 ? (
+      {/* Action bar for the selected row. */}
+      {selectedRow !== null ? (
+        <div className="glass flex flex-wrap items-center gap-2 rounded-lg border border-foreground/25 px-3 py-2">
+          <span className="text-xs text-muted-foreground">
+            Fila {page * PAGE_SIZE + selectedRow + 1} seleccionada
+          </span>
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            <Button size="sm" variant="outline" onClick={copySelected}>
+              {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
+              {copied ? "Copiado" : "Copiar JSON"}
+            </Button>
+            {canMutate ? (
+              <Button size="sm" variant="outline" onClick={openDuplicate}>
+                <CopyPlus className="size-3.5" />
+                Duplicar
+              </Button>
+            ) : null}
+            {canTargetRow ? (
+              <>
+                <Button size="sm" variant="outline" onClick={openEdit}>
+                  <Pencil className="size-3.5" />
+                  Editar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={deleteSelected}
+                  disabled={deleting}
+                  className="text-danger hover:text-danger"
+                >
+                  {deleting ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="size-3.5" />
+                  )}
+                  Eliminar
+                </Button>
+              </>
+            ) : null}
+            <button
+              onClick={() => setSelectedRow(null)}
+              className="rounded p-1 text-muted-foreground hover:text-foreground"
+              title="Quitar selección (Esc)"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {canMutate && !canTargetRow && rows.length > 0 ? (
         <p className="rounded-md border border-border/60 bg-foreground/[0.03] px-3 py-2 text-xs text-muted-foreground">
           Esta tabla no tiene clave primaria, así que no se puede identificar una
-          fila concreta para editarla o borrarla. Puedes insertar filas nuevas o
-          usar el editor SQL.
+          fila concreta para editarla o borrarla. Puedes insertar y duplicar
+          filas, o usar el editor SQL.
         </p>
       ) : null}
 
@@ -222,7 +343,6 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
         <table className="w-full min-w-max text-xs">
           <thead className="border-b border-border/60 bg-foreground/[0.03]">
             <tr>
-              {canEditRows ? <th className="w-16 px-2 py-2" /> : null}
               {gridColumns.map((c) => {
                 const meta = columns.find((x) => x.name === c);
                 const sorted = orderBy === c;
@@ -253,47 +373,29 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
           <tbody>
             {loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={gridColumns.length + 1} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={Math.max(1, gridColumns.length)} className="px-3 py-8 text-center text-muted-foreground">
                   <Loader2 className="mx-auto size-4 animate-spin" />
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={gridColumns.length + 1} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={Math.max(1, gridColumns.length)} className="px-3 py-8 text-center text-muted-foreground">
                   Sin filas.
                 </td>
               </tr>
             ) : (
               rows.map((row, i) => (
-                <tr key={i} className="border-b border-border/40 last:border-0 hover:bg-foreground/[0.02]">
-                  {canEditRows ? (
-                    <td className="px-2 py-1.5">
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          onClick={() => {
-                            setDialogError(null);
-                            setEditing({ mode: "edit", row });
-                          }}
-                          className="rounded p-1 text-muted-foreground hover:text-foreground"
-                          title="Editar fila"
-                        >
-                          <Pencil className="size-3" />
-                        </button>
-                        <button
-                          onClick={() => void removeRow(row, i)}
-                          disabled={busyRow === i}
-                          className="rounded p-1 text-muted-foreground hover:text-danger"
-                          title="Eliminar fila"
-                        >
-                          {busyRow === i ? (
-                            <Loader2 className="size-3 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-3" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-                  ) : null}
+                <tr
+                  key={i}
+                  onClick={() => setSelectedRow((cur) => (cur === i ? null : i))}
+                  aria-selected={selectedRow === i}
+                  className={cn(
+                    "cursor-pointer border-b border-border/40 last:border-0 transition-colors",
+                    selectedRow === i
+                      ? "bg-foreground/[0.08]"
+                      : "hover:bg-foreground/[0.03]",
+                  )}
+                >
                   {row.map((cell, j) => (
                     <td key={j} className="max-w-xs truncate px-3 py-1.5 font-mono">
                       {renderCell(cell)}
@@ -308,7 +410,10 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>
-          Filas {page * PAGE_SIZE + (rows.length ? 1 : 0)}–{page * PAGE_SIZE + rows.length}
+          {rows.length > 0
+            ? `Filas ${page * PAGE_SIZE + 1}–${page * PAGE_SIZE + rows.length}`
+            : "Sin filas"}
+          {rows.length > 0 ? " · haz clic en una fila para actuar sobre ella" : ""}
         </span>
         <div className="flex items-center gap-1">
           <Button
@@ -337,7 +442,7 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
           mode={editing.mode}
           table={`${schema}.${table}`}
           columns={columns}
-          initial={editing.mode === "edit" ? rowToRecord(editing.row) : undefined}
+          initial={editing.initial}
           saving={saving}
           error={dialogError}
           onCancel={() => setEditing(null)}
