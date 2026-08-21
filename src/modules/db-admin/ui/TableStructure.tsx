@@ -24,10 +24,16 @@ export function TableStructure({
     void (async () => {
       setLoading(true);
       setError(null);
-      const res = await tableDetailAction(connectionId, schema, table);
-      if (res.ok) setDetail(res.value);
-      else setError(res.error);
-      setLoading(false);
+      try {
+        const res = await tableDetailAction(connectionId, schema, table);
+        if (res.ok) setDetail(res.value);
+        else setError(res.error);
+      } catch (e) {
+        // Without this the spinner would hang forever on a server-side throw.
+        setError(e instanceof Error ? e.message : "No se pudo leer la estructura.");
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [connectionId, schema, table]);
 

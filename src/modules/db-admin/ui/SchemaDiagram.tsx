@@ -38,10 +38,16 @@ export function SchemaDiagram({
     void (async () => {
       setLoading(true);
       setError(null);
-      const res = await schemaDiagramAction(connectionId, schema);
-      if (res.ok) setLayout(layoutDiagram(res.value));
-      else setError(res.error);
-      setLoading(false);
+      try {
+        const res = await schemaDiagramAction(connectionId, schema);
+        if (res.ok) setLayout(layoutDiagram(res.value));
+        else setError(res.error);
+      } catch (e) {
+        // Without this the spinner would hang forever on a server-side throw.
+        setError(e instanceof Error ? e.message : "No se pudo construir el diagrama.");
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [connectionId, schema]);
 

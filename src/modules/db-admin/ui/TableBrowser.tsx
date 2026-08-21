@@ -66,21 +66,28 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
     async (nextPage: number, sort: { by: string | null; dir: SortDirection }) => {
       setLoading(true);
       setError(null);
-      const res = await browseRowsAction(connectionId, schema, table, {
-        limit: PAGE_SIZE,
-        offset: nextPage * PAGE_SIZE,
-        orderBy: sort.by,
-        direction: sort.dir,
-      });
-      if (res.ok) {
-        setGridColumns(res.value.columns);
-        setRows(res.value.rows);
-        setHasMore(res.value.hasMore);
-      } else {
-        setError(res.error);
+      try {
+        const res = await browseRowsAction(connectionId, schema, table, {
+          limit: PAGE_SIZE,
+          offset: nextPage * PAGE_SIZE,
+          orderBy: sort.by,
+          direction: sort.dir,
+        });
+        if (res.ok) {
+          setGridColumns(res.value.columns);
+          setRows(res.value.rows);
+          setHasMore(res.value.hasMore);
+        } else {
+          setError(res.error);
+          setRows([]);
+        }
+      } catch (e) {
+        // Without this the spinner would hang forever on a server-side throw.
+        setError(e instanceof Error ? e.message : "No se pudieron leer las filas.");
         setRows([]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     },
     [connectionId, schema, table],
   );
@@ -91,8 +98,14 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
       setPage(0);
       setOrderBy(null);
       setDirection("asc");
-      const detail = await tableDetailAction(connectionId, schema, table);
-      setColumns(detail.ok ? detail.value.columns : []);
+      try {
+        const detail = await tableDetailAction(connectionId, schema, table);
+        setColumns(detail.ok ? detail.value.columns : []);
+      } catch {
+        // Structure is only needed for the PK-aware edit/delete buttons; the
+        // grid itself still works without it, so don't block on this.
+        setColumns([]);
+      }
       await load(0, { by: null, dir: "asc" });
     })();
   }, [connectionId, schema, table, load]);
@@ -130,26 +143,36 @@ export function TableBrowser({ connectionId, readOnly, schema, table }: Props) {
   async function saveRow(values: Record<string, unknown>) {
     setSaving(true);
     setDialogError(null);
-    const res =
-      editing?.mode === "edit"
-        ? await updateRowAction(connectionId, schema, table, values, keyOf(editing.row))
-        : await insertRowAction(connectionId, schema, table, values);
-    setSaving(false);
-    if (res.ok) {
-      setEditing(null);
-      await load(page, { by: orderBy, dir: direction });
-    } else {
-      setDialogError(res.error);
+    try {
+      const res =
+        editing?.mode === "edit"
+          ? await updateRowAction(connectionId, schema, table, values, keyOf(editing.row))
+          : await insertRowAction(connectionId, schema, table, values);
+      if (res.ok) {
+        setEditing(null);
+        await load(page, { by: orderBy, dir: direction });
+      } else {
+        setDialogError(res.error);
+      }
+    } catch (e) {
+      setDialogError(e instanceof Error ? e.message : "No se pudo guardar la fila.");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function removeRow(row: unknown[], index: number) {
     if (!confirm("¿Eliminar esta fila? No se puede deshacer.")) return;
     setBusyRow(index);
-    const res = await deleteRowAction(connectionId, schema, table, keyOf(row));
-    setBusyRow(null);
-    if (res.ok) await load(page, { by: orderBy, dir: direction });
-    else setError(res.error);
+    try {
+      const res = await deleteRowAction(connectionId, schema, table, keyOf(row));
+      if (res.ok) await load(page, { by: orderBy, dir: direction });
+      else setError(res.error);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo eliminar la fila.");
+    } finally {
+      setBusyRow(null);
+    }
   }
 
   return (

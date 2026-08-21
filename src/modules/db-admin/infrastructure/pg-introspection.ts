@@ -9,6 +9,7 @@ import type {
   ForeignKeyInfo,
   IndexInfo,
 } from "@/modules/db-admin/domain/schema-info";
+import { toStringArray } from "@/modules/db-admin/domain/pg-array";
 
 const SYSTEM_SCHEMAS = new Set([
   "pg_catalog",
@@ -119,16 +120,19 @@ export class PgIntrospection implements IntrospectionPort {
         constraint_name: string;
         table_schema: string;
         table_name: string;
-        columns: string[];
+        columns: unknown;
         ref_schema: string;
         ref_table: string;
-        ref_columns: string[];
+        ref_columns: unknown;
       }>(
         `SELECT con.conname                AS constraint_name,
                 nsp.nspname                AS table_schema,
                 rel.relname                AS table_name,
+                -- ::text is load-bearing: without it these come back as
+                -- name[], which node-postgres hands over as a raw "{a,b}"
+                -- string instead of a JS array.
                 ARRAY(
-                  SELECT att.attname
+                  SELECT att.attname::text
                     FROM unnest(con.conkey) WITH ORDINALITY AS k(attnum, ord)
                     JOIN pg_attribute att
                       ON att.attrelid = con.conrelid AND att.attnum = k.attnum
@@ -137,7 +141,7 @@ export class PgIntrospection implements IntrospectionPort {
                 fnsp.nspname               AS ref_schema,
                 frel.relname               AS ref_table,
                 ARRAY(
-                  SELECT fatt.attname
+                  SELECT fatt.attname::text
                     FROM unnest(con.confkey) WITH ORDINALITY AS fk(attnum, ord)
                     JOIN pg_attribute fatt
                       ON fatt.attrelid = con.confrelid AND fatt.attnum = fk.attnum
@@ -157,10 +161,10 @@ export class PgIntrospection implements IntrospectionPort {
           constraintName: r.constraint_name,
           schema: r.table_schema,
           table: r.table_name,
-          columns: r.columns ?? [],
+          columns: toStringArray(r.columns),
           refSchema: r.ref_schema,
           refTable: r.ref_table,
-          refColumns: r.ref_columns ?? [],
+          refColumns: toStringArray(r.ref_columns),
         })),
       );
     });
