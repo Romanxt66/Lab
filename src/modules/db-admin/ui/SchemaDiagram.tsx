@@ -1,7 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, ZoomIn, ZoomOut, Maximize2, Key, Link2 } from "lucide-react";
+import {
+  Loader2,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Maximize2,
+  Minimize2,
+  Key,
+  Link2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ErrorNote } from "@/modules/dev-utils/ui/shared";
 import { schemaDiagramAction } from "@/modules/db-admin/actions";
@@ -33,6 +42,35 @@ export function SchemaDiagram({
   const [loading, setLoading] = React.useState(true);
   const [zoom, setZoom] = React.useState(0.8);
   const [hovered, setHovered] = React.useState<string | null>(null);
+  const [fullscreen, setFullscreen] = React.useState(false);
+  const frameRef = React.useRef<HTMLDivElement>(null);
+  // Mirrors `fullscreen` for the document listeners, which outlive a single render.
+  const fullscreenRef = React.useRef(false);
+  const zoomBeforeFullscreen = React.useRef(zoom);
+
+  const leaveFullscreen = React.useCallback(() => {
+    if (!fullscreenRef.current) return;
+    fullscreenRef.current = false;
+    setFullscreen(false);
+    setZoom(zoomBeforeFullscreen.current);
+  }, []);
+
+  React.useEffect(() => {
+    // Native fullscreen can also be left with Esc or the browser's own UI.
+    const onChange = () => {
+      if (!document.fullscreenElement) leaveFullscreen();
+    };
+    // Native fullscreen handles Esc itself; this covers the overlay fallback.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !document.fullscreenElement) leaveFullscreen();
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [leaveFullscreen]);
 
   React.useEffect(() => {
     void (async () => {
@@ -79,8 +117,43 @@ export function SchemaDiagram({
   }
   const isDimmed = (table: string) => hovered !== null && !related.has(table);
 
+  const toggleFullscreen = () => {
+    if (fullscreenRef.current) {
+      // Exiting native fullscreen fires `fullscreenchange`, which restores the view.
+      if (document.fullscreenElement) void document.exitFullscreen();
+      else leaveFullscreen();
+      return;
+    }
+    const frame = frameRef.current;
+    if (!frame) return;
+
+    zoomBeforeFullscreen.current = zoom;
+    fullscreenRef.current = true;
+    setFullscreen(true);
+
+    // Without the Fullscreen API (e.g. iPhone Safari) the fixed overlay covers the page.
+    const native = typeof frame.requestFullscreen === "function";
+    const width = native ? window.screen.width : window.innerWidth;
+    const height = native ? window.screen.height : window.innerHeight;
+    // Fit the whole diagram, leaving room for the toolbar and the legend.
+    const fit = Math.min((width - 48) / layout.width, (height - 120) / layout.height);
+    setZoom(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, fit)));
+
+    if (native) {
+      frame.requestFullscreen().catch(() => {
+        // Denied by the browser: the overlay is still showing, so nothing else to do.
+      });
+    }
+  };
+
   return (
-    <div className="space-y-2">
+    <div
+      ref={frameRef}
+      className={cn(
+        "space-y-2",
+        fullscreen && "fixed inset-0 z-50 flex flex-col gap-2 space-y-0 bg-background p-4",
+      )}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
           {layout.nodes.length} tablas · {layout.edges.length} relaciones — pasa el
@@ -92,15 +165,30 @@ export function SchemaDiagram({
             <ZoomOut className="size-3.5" />
           </Button>
           <Button size="sm" variant="outline" onClick={() => setZoom(0.8)} title="Restablecer zoom">
-            <Maximize2 className="size-3.5" />
+            <RotateCcw className="size-3.5" />
           </Button>
           <Button size="sm" variant="outline" onClick={() => setZoom((z) => Math.min(MAX_ZOOM, z + ZOOM_STEP))}>
             <ZoomIn className="size-3.5" />
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={toggleFullscreen}
+            title={fullscreen ? "Salir de pantalla completa (Esc)" : "Pantalla completa"}
+            aria-label={fullscreen ? "Salir de pantalla completa" : "Ver en pantalla completa"}
+            aria-pressed={fullscreen}
+          >
+            {fullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+          </Button>
         </div>
       </div>
 
-      <div className="overflow-auto rounded-lg border border-border/60 bg-foreground/[0.015]">
+      <div
+        className={cn(
+          "overflow-auto rounded-lg border border-border/60 bg-foreground/[0.015]",
+          fullscreen && "min-h-0 flex-1",
+        )}
+      >
         <svg
           width={layout.width * zoom}
           height={layout.height * zoom}
